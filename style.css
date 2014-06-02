@@ -1,0 +1,7 @@
+.x-grid3-cell-inner, .x-grid3-hd-inner {
+  white-space: normal; /* changed from nowrap */
+}
+
+.maskText td {
+  font : 11px/13px tahoma,helvetica,sans-serif;
+}
