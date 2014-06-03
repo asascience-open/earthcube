@@ -10,6 +10,8 @@ function init() {
       ,fields        : [
          {name : 'id'}
         ,{name : 'title'}
+        ,{name : 'when'}
+        ,{name : 'where'}
         ,{name : 'online'}
       ]
     })
@@ -22,7 +24,7 @@ function init() {
   });
 
   new Ext.Window({
-     title           : 'Earthcube'
+     title           : 'Search'
     ,id              : 'gp'
     ,layout          : 'fit'
     ,width           : 640
@@ -40,6 +42,32 @@ function init() {
           }
         })
         ,{id : 'title',dataIndex : 'title',header : 'Description'}
+        ,{id : 'when',dataIndex : 'when',header : 'When',renderer : function(val,p,rec) {
+          var rows = [];
+          _.each(val,function(o) {
+            var minT = o.start; 
+            var maxT = o.end;
+            if (minT != '' && maxT != '') {
+              if (isoDateToDate(minT).format('mmm d, yyyy') == isoDateToDate(maxT).format('mmm d, yyyy')) {
+                rows.push(isoDateToDate(minT).format('mmm d, yyyy'));
+              }
+              else if (isoDateToDate(minT).format('yyyy') == isoDateToDate(maxT).format('yyyy')) {
+                rows.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
+              }
+              else {
+                rows.push(isoDateToDate(minT).format('mmm d, yyyy') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
+              }
+            }
+          });
+          return rows.join('<br>');
+        }}
+        ,{id : 'where',dataIndex : 'where',header : 'Where',renderer : function(val,p,rec) {
+          var rows = [];
+          _.each(val,function(o) {
+            rows.push(o.west + ',' + o.south + ',' + o.east + ',' + o.north);
+          });
+          return rows.join('<br>');
+        }}
         ,{dataIndex : 'online',header : 'Protocol',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
@@ -167,6 +195,8 @@ function search(cmp,sto,searchText,start) {
         data.rows.push({
            id       : report.id
           ,title    : report.description != 'none' ? report.description : report.title
+          ,when     : report.when
+          ,where    : report.where
           ,online   : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
         });
       }
@@ -182,4 +212,24 @@ function search(cmp,sto,searchText,start) {
       ,pageSize : pageSize
     }
   );
+}
+
+function isoDateToDate(s) {
+  // 2010-01-01T00:00:00Z
+  s = s.replace("\n",'');
+  var p = s.split('T');
+  if (p.length == 2) {
+    var ymd = p[0].split('-');
+    var hm = p[1].split(':');
+    return new Date(
+       ymd[0]
+      ,ymd[1] - 1
+      ,ymd[2]
+      ,hm[0]
+      ,hm[1]
+    );
+  }
+  else {
+    return false;
+  }
 }
