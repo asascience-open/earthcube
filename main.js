@@ -20,6 +20,7 @@ function init() {
         ,{name : 'when'}
         ,{name : 'where'}
         ,{name : 'online'}
+        ,{name : 'wms'}
       ]
     })
     ,remoteSort : true
@@ -86,6 +87,8 @@ function init() {
           });
           return rows.join('<br>');
         }}
+*/
+/*
         ,{dataIndex : 'online',header : 'Protocol',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
@@ -93,6 +96,15 @@ function init() {
           });
           return rows.join('<br>');
         }}
+*/
+        ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
+          var rows = [];
+          _.each(val,function(o) {
+            rows.push(o.name);
+          });
+          return rows.join('<br>');
+        }}
+/*
         ,{dataIndex : 'online',header : 'Name',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
@@ -258,11 +270,12 @@ function search(cmp,sto,searchText,start) {
         var node = page.next();
         var report = node.report();
         data.rows.push({
-           id       : report.id
-          ,title    : report.description != 'none' ? report.description : report.title
-          ,when     : report.when
-          ,where    : report.where
-          ,online   : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
+           id     : report.id
+          ,title  : report.description != 'none' ? report.description : report.title
+          ,when   : report.when
+          ,where  : report.where
+          ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
+          ,wms    : _.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()})
         });
       }
       sto.setBaseParam('start',start ? start : 1);
