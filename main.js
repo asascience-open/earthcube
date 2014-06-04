@@ -1,5 +1,6 @@
 var pageSize = 10;
 var searchStore;
+var layersStore;
 
 var map;
 var searchShadow;
@@ -9,6 +10,8 @@ var proj900913 = new OpenLayers.Projection("EPSG:900913");
 var proj4326   = new OpenLayers.Projection("EPSG:4326");
 
 function init() {
+  var tocWidth = 400;
+
   searchStore = new Ext.data.Store({
     reader     : new Ext.data.JsonReader({
        idProperty    : 'id'
@@ -45,21 +48,23 @@ function init() {
      title           : 'Search'
     ,id              : 'searchPanel'
     ,layout          : 'fit'
-    ,width           : 400
-    ,region          : 'west'
-    ,constrainHeader : true
+    ,region          : 'center'
     ,items           : new Ext.grid.GridPanel({
-       store   : searchStore
-      ,columns : [
+       disableSelection : true
+      ,store            : searchStore
+      ,columns          : [
+/*
         new Ext.grid.RowNumberer({
-          renderer : function(v,p,record,rowIndex) {
+          renderer : function(val,p,record,rowIndex) {
             if (this.rowspan) {
               p.cellAttr = 'rowspan="'+this.rowspan+'"';
             }
             return rowIndex + 1 + record.store.baseParams.start - 1;
           }
         })
-        ,{id : 'title',dataIndex : 'title',header : 'Description'}
+*/
+        {id : 'title',dataIndex : 'title',header : 'Description'}
+/*
         ,{id : 'when',dataIndex : 'when',header : 'When',width : 150,renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
@@ -79,6 +84,7 @@ function init() {
           });
           return rows.join('<br>');
         }}
+*/
 /*
         ,{id : 'where',dataIndex : 'where',header : 'Where',renderer : function(val,p,rec) {
           var rows = [];
@@ -100,7 +106,8 @@ function init() {
         ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
-            rows.push(o.name);
+            var params = [rec.get('id'),o.id,rec.get('title')];
+            rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o.name + '</a>');
           });
           return rows.join('<br>');
         }}
@@ -124,10 +131,11 @@ function init() {
       ,autoExpandColumn : 'title'
       ,border           : false
       ,loadMask         : true
+      ,enableHdMenu     : false
       ,tbar             : [new Ext.ux.form.SearchField({
          emptyText       : 'Enter keywords to find data.'
         ,id              : 'searchText'
-        ,width           : 220
+        ,width           : tocWidth - 8
         ,border          : false
         ,wrapFocusClass  : ''
         ,disableSelection : true
@@ -152,6 +160,10 @@ function init() {
           this.hasSearch = true;
           this.triggers[0].show();
         }
+        ,listeners : {afterrender : function(cmp) {
+          cmp.setValue('temperature');
+          cmp.onTrigger2Click();
+        }}
       })]
       ,bbar            : new Ext.PagingToolbar({
          pageSize    : pageSize
@@ -224,10 +236,60 @@ function init() {
     })
   };
 
+  layersStore = new Ext.data.ArrayStore({
+    fields : [
+       {name : 'reportId'}
+      ,{name : 'wmsId'}
+      ,{name : 'name'}
+      ,{name : 'status'}
+      ,{name : 'reportTitle'}
+    ]
+    ,listeners : {
+      add : function(sto) {
+        if (sto.getCount() > 0) {
+          Ext.getCmp('layersMsg').setText(sto.getCount() + ' active layer(s)');
+        }
+      }
+      ,remove : function(sto) {
+        if (sto.getCount() == 0) {
+          Ext.getCmp('layersMsg').setText('No active layers');
+        }
+      }
+    }
+  });
+
+  var layerPanel = {
+     height   : 250
+    ,region   : 'south'
+    ,title    : 'My Layers'
+    ,split    : true
+    ,layout   : 'fit'
+    ,defaults : {border : false}
+    ,items    : [new Ext.grid.GridPanel({
+       store            : layersStore
+      ,disableSelection : true
+      ,columns          : [
+        {align : 'center',width : 40,renderer : function(val,p,rec) {
+          var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
+          return '<a href="javascript:removeWms(\'' + params.join("','") + '\')">' + '<img class="link" title="Remove layer" src="img/remove.png">' + '</a>';
+        }}
+        ,{id : 'name',dataIndex : 'name',header : 'Name',renderer : function(val,p,rec) {
+          return rec.get('reportTitle') + ' : ' + val;
+        }}
+        ,{align : 'center',width : 40,dataIndex : 'status',renderer : function(val,p,rec) {
+          return '<img ' + (rec.get('status') == 'loading' ? 'title="Loading..."' : '') + ' width=16 height=16 src="img/' + (rec.get('status') == 'loading' ? 'loading.gif' : 'blank.png') + '">';
+        }}
+      ]
+      ,autoExpandColumn : 'name'
+      ,hideHeaders      : true
+      ,tbar             : [{text : 'Click on a WMS link from your search results to add to the map.'}]
+      ,bbar             : ['->',{text : 'No active layers',id : 'layersMsg'}]
+    })]
+  }
+
   var mapPanel = {
      html      : '<div id="map"></div>'
     ,region    : 'center'
-    ,title     : 'Map'
     ,listeners : {
       afterrender : function(p) {
         initMap();
@@ -249,7 +311,22 @@ function init() {
     ,layout : 'border'
     ,items  : [ 
        mapPanel
-      ,searchPanel
+      ,{
+         layout   : 'border'
+        ,width    : tocWidth 
+        ,region   : 'west'
+        ,border   : false
+        ,split    : true
+        ,items    : [
+           searchPanel
+          ,layerPanel
+        ]
+        ,listeners : {afterrender : function(cmp) {
+          cmp.addListener('resize',function(cmp,w) {
+            Ext.getCmp('searchText').setWidth(w - 7);
+          });
+        }}
+      }
     ]
   });
 }
@@ -347,9 +424,31 @@ function initMap() {
       ,searchShadow
       ,searchHilite
     ]
-    ,controls : [new OpenLayers.Control.Navigation(),new OpenLayers.Control.MousePosition({displayProjection : proj4326})]
-    ,center : new OpenLayers.LonLat(0,0)
-    ,zoom   : 1
+    ,controls          : [new OpenLayers.Control.Navigation(),new OpenLayers.Control.MousePosition({displayProjection : proj4326})]
+    ,projection        : proj900913
+    ,displayProjection : proj4326
+    ,units             : 'm'
+    ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
+    ,center            : new OpenLayers.LonLat(0,0)
+    ,zoom              : 1
+  });
+
+  map.events.register('addlayer',this,function(e) {
+    layersStore.add(new layersStore.recordType({
+       reportId    : e.layer.attributes.reportId
+      ,wmsId       : e.layer.attributes.wmsId
+      ,name        : e.layer.name
+      ,status      : 'loading'
+      ,reportTitle : e.layer.attributes.reportTitle
+    }));
+  });
+  map.events.register('removelayer',this,function(e) {
+    var idx = layersStore.findBy(function(rec) {
+      return rec.get('reportId') == e.layer.attributes.reportId && rec.get('wmsId') == e.layer.attributes.wmsId;
+    });
+    if (idx >= 0) {
+      layersStore.removeAt(idx);
+    }
   });
 }
 
@@ -406,6 +505,61 @@ function makeFeatures(rec) {
     features.push(f[0]);
   });
   return features;
+}
+
+function removeWms(reportId,wmsId,name) {
+  _.each(map.getLayersByName(name),function(o) {
+    if (o.attributes.reportId == reportId && o.attributes.wmsId == wmsId) {
+      map.removeLayer(o);
+    }
+  });
+}
+
+function addWms(reportId,wmsId,reportTitle) {
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    // check to see if it's been added already
+    var lyrIdx = layersStore.findBy(function(rec) {
+      return rec.get('reportId') == reportId && rec.get('wmsId') == wmsId;
+    });
+    if (lyrIdx >= 0) {
+      Ext.Msg.alert('Error',"We're sorry, but you have already added this layer to your map.");
+      return false;
+    }
+    else {
+      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('wms'),{id : wmsId});
+
+      if (!lyr.attributes) {
+        lyr.attributes = {};
+      }
+      lyr.attributes.reportId = reportId;
+      lyr.attributes.wmsId    = wmsId;
+      lyr.attributes.reportTitle = reportTitle
+
+      lyr.events.register('loadstart',this,function(e) {
+        var idx = layersStore.findBy(function(rec) {
+          return rec.get('reportId') == e.object.attributes.reportId && rec.get('wmsId') == e.object.attributes.wmsId;
+        });
+        if (idx >= 0) {
+          var rec = layersStore.getAt(idx);
+          rec.set('status','loading');
+          rec.commit();
+        }
+      });
+      lyr.events.register('loadend',this,function(e) {
+        var idx = layersStore.findBy(function(rec) {
+          return rec.get('reportId') == e.object.attributes.reportId && rec.get('wmsId') == e.object.attributes.wmsId;
+        });
+        if (idx >= 0) {
+          var rec = layersStore.getAt(idx);
+          rec.set('status','');
+          rec.commit();
+        }
+      });
+
+      map.addLayer(lyr);
+    }
+  }
 }
 
 function isoDateToDate(s) {

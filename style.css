@@ -1,5 +1,9 @@
 .x-grid3-cell-inner, .x-grid3-hd-inner {
-  white-space: normal; /* changed from nowrap */
+  white-space : normal; /* changed from nowrap */
+}
+
+.link {
+  cursor : pointer;
 }
 
 .maskText td {
