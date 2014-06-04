@@ -6,7 +6,6 @@ var map;
 var searchShadow;
 var searchHilite;
 var proj3857   = new OpenLayers.Projection("EPSG:3857");
-var proj900913 = new OpenLayers.Projection("EPSG:900913");
 var proj4326   = new OpenLayers.Projection("EPSG:4326");
 
 function init() {
@@ -415,17 +414,11 @@ function initMap() {
           ,wrapDateLine      : true
         }
       )
-/*
-      new OpenLayers.Layer.Google('Google Terrain',{
-         type          : google.maps.MapTypeId.TERRAIN
-        ,projection    : proj900913
-      })
-*/
       ,searchShadow
       ,searchHilite
     ]
     ,controls          : [new OpenLayers.Control.Navigation(),new OpenLayers.Control.MousePosition({displayProjection : proj4326})]
-    ,projection        : proj900913
+    ,projection        : proj3857
     ,displayProjection : proj4326
     ,units             : 'm'
     ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
@@ -490,7 +483,7 @@ function makeFeatures(rec) {
         }
       }]
     });
-    f[0].geometry.transform(proj4326,proj900913);
+    f[0].geometry.transform(proj4326,proj3857);
 /*
     // change geometry from polygon to line
     if (f[0].geometry.getArea() == 0) {
