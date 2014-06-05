@@ -21,6 +21,7 @@ function init() {
         ,{name : 'where'}
         ,{name : 'online'}
         ,{name : 'wms'}
+        ,{name : 'node'}
       ]
     })
     ,remoteSort : true
@@ -60,7 +61,6 @@ function init() {
         })
 */
         {id : 'title',dataIndex : 'title',header : 'Description'}
-/*
         ,{id : 'when',dataIndex : 'when',header : 'When',width : 150,renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
@@ -80,7 +80,12 @@ function init() {
           });
           return rows.join('<br>');
         }}
-*/
+        ,{header : 'Download',renderer : function(val,p,rec) {
+          if (rec.get('node')) {
+            var params = [rec.get('id')];
+            return '<a title="Download data" class="link" href="javascript:getData(\'' + params.join("','") + '\')">' + 'Get data' + '</a>';
+          }
+        }}
 /*
         ,{id : 'where',dataIndex : 'where',header : 'Where',renderer : function(val,p,rec) {
           var rows = [];
@@ -356,6 +361,7 @@ function search(cmp,sto,searchText,start) {
           ,where  : report.where
           ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
           ,wms    : _.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()})
+          ,node   : node.isAccessible() ? node : false
         });
       }
       sto.setBaseParam('start',start ? start : 1);
@@ -421,7 +427,11 @@ function initMap() {
       ,searchShadow
       ,searchHilite
     ]
-    ,controls          : [new OpenLayers.Control.Navigation(),new OpenLayers.Control.MousePosition({displayProjection : proj4326})]
+    ,controls          : [
+       new OpenLayers.Control.Navigation()
+      ,new OpenLayers.Control.MousePosition({displayProjection : proj4326})
+      ,new OpenLayers.Control.ZoomPanel()
+    ]
     ,projection        : proj3857
     ,displayProjection : proj4326
     ,units             : 'm'
@@ -502,6 +512,15 @@ function makeFeatures(rec) {
     features.push(f[0]);
   });
   return features;
+}
+
+function getData(reportId) {
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    searchStore.getAt(searchIdx).get('node').accessLink(function(resp) {
+      Ext.Msg.alert('Download','<a target=_blank href="' + resp + '">Get data</a>');
+    });
+  }
 }
 
 function removeWms(reportId,wmsId,name) {

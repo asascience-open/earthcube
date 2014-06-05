@@ -9,3 +9,8 @@
 .maskText td {
   font : 11px/13px tahoma,helvetica,sans-serif;
 }
+
+.olControlZoomPanel {
+  top : 10px !important;
+  left : 10px !important;
+}
