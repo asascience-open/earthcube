@@ -1,4 +1,4 @@
-var pageSize = 10;
+var pageSize = 20;
 var searchStore;
 var layersStore;
 
@@ -9,8 +9,6 @@ var proj3857   = new OpenLayers.Projection("EPSG:3857");
 var proj4326   = new OpenLayers.Projection("EPSG:4326");
 
 function init() {
-  var tocWidth = 400;
-
   searchStore = new Ext.data.Store({
     reader     : new Ext.data.JsonReader({
        idProperty    : 'id'
@@ -44,8 +42,7 @@ function init() {
   });
 
   var searchPanel = {
-     title           : 'Search'
-    ,id              : 'searchPanel'
+     id              : 'searchPanel'
     ,layout          : 'fit'
     ,region          : 'center'
     ,items           : new Ext.grid.GridPanel({
@@ -134,7 +131,6 @@ function init() {
       ,tbar             : [new Ext.ux.form.SearchField({
          emptyText       : 'Enter keywords to find data.'
         ,id              : 'searchText'
-        ,width           : tocWidth - 8
         ,border          : false
         ,wrapFocusClass  : ''
         ,disableSelection : true
@@ -233,6 +229,11 @@ function init() {
         }
       }
     })
+    ,listeners : {afterrender : function(cmp) {
+      cmp.addListener('resize',function(cmp,w) {
+        Ext.getCmp('searchText').setWidth(w - 7);
+      });
+    }}
   };
 
   layersStore = new Ext.data.ArrayStore({
@@ -258,9 +259,9 @@ function init() {
   });
 
   var layerPanel = {
-     height   : 250
-    ,region   : 'south'
-    ,title    : 'My Layers'
+     region   : 'south'
+    ,id       : 'layerPanel'
+    ,title    : 'My Data'
     ,split    : true
     ,layout   : 'fit'
     ,defaults : {border : false}
@@ -306,27 +307,30 @@ function init() {
 
   new Ext.Viewport({
      layout : 'border'
-    ,title  : 'Map'
-    ,layout : 'border'
     ,items  : [ 
-       mapPanel
+      {
+        region : 'north'
+       ,title  : 'Earthcube'
+       ,border : false
+      }
+      ,searchPanel
       ,{
          layout   : 'border'
-        ,width    : tocWidth 
-        ,region   : 'west'
+        ,id       : 'vizPanel'
+        ,width    : 400 
+        ,region   : 'east'
         ,border   : false
         ,split    : true
         ,items    : [
-           searchPanel
+           mapPanel
           ,layerPanel
         ]
-        ,listeners : {afterrender : function(cmp) {
-          cmp.addListener('resize',function(cmp,w) {
-            Ext.getCmp('searchText').setWidth(w - 7);
-          });
-        }}
       }
     ]
+    ,listeners : {afterrender : function() {
+      Ext.getCmp('layerPanel').setHeight(Ext.getCmp('searchPanel').getHeight() * 0.60);
+      Ext.getCmp('vizPanel').doLayout();
+    }}
   });
 }
 
@@ -423,7 +427,7 @@ function initMap() {
     ,units             : 'm'
     ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
     ,center            : new OpenLayers.LonLat(0,0)
-    ,zoom              : 1
+    ,zoom              : 0
   });
 
   map.events.register('addlayer',this,function(e) {
