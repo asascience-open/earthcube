@@ -73,7 +73,12 @@ function init() {
                 rows.push(isoDateToDate(minT).format('mmm d, yyyy'));
               }
               else if (isoDateToDate(minT).format('yyyy') == isoDateToDate(maxT).format('yyyy')) {
-                rows.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
+                if (isoDateToDate(minT).format('mmm') == isoDateToDate(maxT).format('mmm')) {
+                  rows.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('d, yyyy'));
+                }
+                else {
+                  rows.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
+                }
               }
               else {
                 rows.push(isoDateToDate(minT).format('mmm d, yyyy') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
