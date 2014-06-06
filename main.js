@@ -89,8 +89,8 @@ function init() {
         }}
         ,{header : 'Download',renderer : function(val,p,rec) {
           if (rec.get('node')) {
-            var params = [rec.get('id')];
-            return '<a title="Download data" class="link" href="javascript:getData(\'' + params.join("','") + '\')">' + 'Get data' + '</a>';
+            var params = [rec.get('id'),Ext.id(),rec.get('title')];
+            return '<a title="Download data" class="link" href="javascript:addData(\'' + params.join("','") + '\')">' + 'Get data' + '</a>';
           }
         }}
 /*
@@ -264,11 +264,13 @@ function init() {
       ,{name : 'reportTitle'}
       ,{name : 'where'}
       ,{name : 'visibility'}
+      ,{name : 'accessLink'}
+      ,{name : 'rank'}
     ]
     ,listeners : {
       add : function(sto) {
         if (sto.getCount() > 0) {
-          Ext.getCmp('layersMsg').setText(sto.getCount() + ' active layer(s)');
+          Ext.getCmp('layersMsg').setText(sto.getCount() + ' active dataset(s)');
         }
       }
       ,remove : function(sto) {
@@ -295,20 +297,25 @@ function init() {
           return '<a href="javascript:removeWms(\'' + params.join("','") + '\')">' + '<img class="link" title="Remove layer" src="img/remove.png">' + '</a>';
         }}
         ,{id : 'name',dataIndex : 'name',header : 'Name',renderer : function(val,p,rec) {
-          return rec.get('reportTitle') + ' : ' + val;
+          return rec.get('reportTitle') + (!/ext-gen/.test(val) ? ' : ' + val : '');
         }}
-        ,{align : 'center',width : 40,dataIndex : 'status',renderer : function(val,p,rec) {
+        ,{align : 'center',width : 30,dataIndex : 'status',renderer : function(val,p,rec) {
           return '<img ' + (val == 'loading' ? 'title="Loading..."' : '') + ' width=16 height=16 src="img/' + (val == 'loading' ? 'loading.gif' : 'blank.png') + '">';
         }}
-        ,{align : 'center',width : 40,dataIndex : 'visibility',renderer : function(val,p,rec) {
+        ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
           var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
-          return '<a href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '</a>';
+          if (rec.get('accessLink')) {
+            return '<a target=_blank href="' + rec.get('accessLink') + '">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
+          }
+          else {
+            return '<a href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '</a><br>Show<br>on map?';
+          }
         }}
       ]
       ,autoExpandColumn : 'name'
       ,hideHeaders      : true
-      ,tbar             : [{text : 'Click on a WMS link from your search results to add to the map.'}]
-      ,bbar             : ['->',{text : 'No active layers',id : 'layersMsg'}]
+      ,tbar             : [{text : 'Click on a link from your search results to add to your list.'}]
+      ,bbar             : ['->',{text : 'No active datasets',id : 'layersMsg'}]
       ,listeners : {
         mouseover : function(e,t) {
           var row = this.getView().findRowIndex(t);
@@ -487,11 +494,17 @@ function initMap() {
        reportId    : e.layer.attributes.reportId
       ,wmsId       : e.layer.attributes.wmsId
       ,name        : e.layer.name
-      ,status      : 'loading'
+      ,status      : (e.layer.attributes.accessLink ? e.layer.attributes.accessLink : 'loading')
       ,reportTitle : e.layer.attributes.reportTitle
       ,where       : e.layer.attributes.where
       ,visibility  : 'visible'
+      ,accessLink  : e.layer.attributes.accessLink
+      ,rank        : e.layer.attributes.accessLink ? 1 : 0
     }));
+    layersStore.sort(
+       [{field : 'rank'},{field : 'reportTitle'},{field : 'name'}]
+      ,'ASC'
+    );
     if (!e.layer.isBaseLayer) {
       map.setLayerIndex(e.layer,map.layers.length - countTopLayers() - 1);
     }
@@ -561,15 +574,6 @@ function makeFeatures(rec) {
   return features;
 }
 
-function getData(reportId) {
-  var searchIdx = searchStore.findExact('id',reportId);
-  if (searchIdx >= 0) {
-    searchStore.getAt(searchIdx).get('node').accessLink(function(resp) {
-      Ext.Msg.alert('Download','<a target=_blank href="' + resp + '">Get data</a>');
-    });
-  }
-}
-
 function toggleWmsVisibility(reportId,wmsId,name) {
   _.each(map.getLayersByName(name),function(o) {
     if (o.attributes.reportId == reportId && o.attributes.wmsId == wmsId) {
@@ -592,6 +596,41 @@ function removeWms(reportId,wmsId,name) {
   searchShadow.setVisibility(false);
   searchHilite.removeAllFeatures();
   searchHilite.redraw();
+}
+
+function addData(reportId,wmsId,reportTitle) { 
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    // check to see if it's been added already
+    var lyrIdx = layersStore.findBy(function(rec) {
+      return rec.get('reportId') == reportId && rec.get('wmsId') == wmsId;
+    });
+    if (lyrIdx >= 0) {
+      Ext.Msg.alert('Error',"We're sorry, but you have already added this dataset to your list.");
+      return false;
+    }
+    else {
+      var lyr = new OpenLayers.Layer.Image(
+         wmsId
+        ,'img/blank.png'
+        ,new OpenLayers.Bounds(0,0,0,0)
+        ,new OpenLayers.Size(10,10)
+      );
+
+      if (!lyr.attributes) {
+        lyr.attributes = {};
+      }
+      lyr.attributes.reportId    = reportId;
+      lyr.attributes.wmsId       = wmsId;
+      lyr.attributes.reportTitle = reportTitle;
+      lyr.attributes.where       = searchStore.getAt(searchIdx).get('where');
+
+      searchStore.getAt(searchIdx).get('node').accessLink(function(resp) {
+        lyr.attributes.accessLink = resp;
+        map.addLayer(lyr);
+      });
+    }
+  }
 }
 
 function addWms(reportId,wmsId,reportTitle) {
