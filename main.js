@@ -263,6 +263,7 @@ function init() {
       ,{name : 'status'}
       ,{name : 'reportTitle'}
       ,{name : 'where'}
+      ,{name : 'visibility'}
     ]
     ,listeners : {
       add : function(sto) {
@@ -297,7 +298,11 @@ function init() {
           return rec.get('reportTitle') + ' : ' + val;
         }}
         ,{align : 'center',width : 40,dataIndex : 'status',renderer : function(val,p,rec) {
-          return '<img ' + (rec.get('status') == 'loading' ? 'title="Loading..."' : '') + ' width=16 height=16 src="img/' + (rec.get('status') == 'loading' ? 'loading.gif' : 'blank.png') + '">';
+          return '<img ' + (val == 'loading' ? 'title="Loading..."' : '') + ' width=16 height=16 src="img/' + (val == 'loading' ? 'loading.gif' : 'blank.png') + '">';
+        }}
+        ,{align : 'center',width : 40,dataIndex : 'visibility',renderer : function(val,p,rec) {
+          var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
+          return '<a href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '</a>';
         }}
       ]
       ,autoExpandColumn : 'name'
@@ -485,6 +490,7 @@ function initMap() {
       ,status      : 'loading'
       ,reportTitle : e.layer.attributes.reportTitle
       ,where       : e.layer.attributes.where
+      ,visibility  : 'visible'
     }));
     if (!e.layer.isBaseLayer) {
       map.setLayerIndex(e.layer,map.layers.length - countTopLayers() - 1);
@@ -564,6 +570,19 @@ function getData(reportId) {
   }
 }
 
+function toggleWmsVisibility(reportId,wmsId,name) {
+  _.each(map.getLayersByName(name),function(o) {
+    if (o.attributes.reportId == reportId && o.attributes.wmsId == wmsId) {
+      o.setVisibility(!o.visibility);
+    }
+  });
+/*
+  searchShadow.setVisibility(false);
+  searchHilite.removeAllFeatures();
+  searchHilite.redraw();
+*/
+}
+
 function removeWms(reportId,wmsId,name) {
   _.each(map.getLayersByName(name),function(o) {
     if (o.attributes.reportId == reportId && o.attributes.wmsId == wmsId) {
@@ -615,6 +634,16 @@ function addWms(reportId,wmsId,reportTitle) {
         if (idx >= 0) {
           var rec = layersStore.getAt(idx);
           rec.set('status','');
+          rec.commit();
+        }
+      });
+      lyr.events.register('visibilitychanged',this,function(e) {
+        var idx = layersStore.findBy(function(rec) {
+          return rec.get('reportId') == e.object.attributes.reportId && rec.get('wmsId') == e.object.attributes.wmsId;
+        });
+        if (idx >= 0) {
+          var rec = layersStore.getAt(idx);
+          rec.set('visibility',e.object.visibility ? 'visible' : 'invisible');
           rec.commit();
         }
       });
