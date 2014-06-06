@@ -3,10 +3,11 @@ var searchStore;
 var layersStore;
 
 var map;
+var proj3857 = new OpenLayers.Projection("EPSG:3857");
+var proj4326 = new OpenLayers.Projection("EPSG:4326");
+
 var searchShadow;
 var searchHilite;
-var proj3857   = new OpenLayers.Projection("EPSG:3857");
-var proj4326   = new OpenLayers.Projection("EPSG:4326");
 
 function init() {
   searchStore = new Ext.data.Store({
@@ -218,22 +219,25 @@ function init() {
         }
       })
       ,listeners : {
-        mouseover : function(e,t) { 
-          searchShadow.setVisibility(true);
+        mouseover : function(e,t) {
           var row = this.getView().findRowIndex(t);
-          if (row >= 0) {
+          if (_.isNumber(row)) {
+            searchShadow.setVisibility(true);
+            searchHilite.removeAllFeatures();
             var rec = this.getStore().getAt(row);
             if (rec) {
-              searchHilite.removeAllFeatures();
               searchHilite.addFeatures(makeFeatures(rec));
-              searchHilite.redraw();
             }
+            searchHilite.redraw();
           }
         }
-        ,mouseout : function(e,t) { 
-          searchShadow.setVisibility(false);
-          searchHilite.removeAllFeatures();
-          searchHilite.redraw();
+        ,mouseout : function(e,t) {
+          var row = this.getView().findRowIndex(t);
+          if (_.isNumber(row)) {
+            searchShadow.setVisibility(false);
+            searchHilite.removeAllFeatures();
+            searchHilite.redraw();
+          }
         }
       }
     })
@@ -253,6 +257,7 @@ function init() {
       ,{name : 'name'}
       ,{name : 'status'}
       ,{name : 'reportTitle'}
+      ,{name : 'where'}
     ]
     ,listeners : {
       add : function(sto) {
@@ -294,6 +299,28 @@ function init() {
       ,hideHeaders      : true
       ,tbar             : [{text : 'Click on a WMS link from your search results to add to the map.'}]
       ,bbar             : ['->',{text : 'No active layers',id : 'layersMsg'}]
+      ,listeners : {
+        mouseover : function(e,t) {
+          var row = this.getView().findRowIndex(t);
+          if (_.isNumber(row)) {
+            searchShadow.setVisibility(true);
+            searchHilite.removeAllFeatures();
+            var rec = this.getStore().getAt(row);
+            if (rec) {
+              searchHilite.addFeatures(makeFeatures(rec));
+            }
+            searchHilite.redraw();
+          }
+        }
+        ,mouseout : function(e,t) {
+          var row = this.getView().findRowIndex(t);
+          if (_.isNumber(row)) {
+            searchShadow.setVisibility(false);
+            searchHilite.removeAllFeatures();
+            searchHilite.redraw();
+          }
+        }
+      }
     })]
   }
 
@@ -452,6 +479,7 @@ function initMap() {
       ,name        : e.layer.name
       ,status      : 'loading'
       ,reportTitle : e.layer.attributes.reportTitle
+      ,where       : e.layer.attributes.where
     }));
     if (!e.layer.isBaseLayer) {
       map.setLayerIndex(e.layer,map.layers.length - countTopLayers());
@@ -501,7 +529,7 @@ function makeFeatures(rec) {
          type       : 'Feature'
         ,geometry   : g
         ,properties : {
-          title : wordwrap(rec.get('title'),20,"\n")
+          title : wordwrap((rec.get('title') ? rec.get('title') : ''),20,"\n")
         }
       }]
     });
@@ -537,6 +565,9 @@ function removeWms(reportId,wmsId,name) {
       map.removeLayer(o);
     }
   });
+  searchShadow.setVisibility(false);
+  searchHilite.removeAllFeatures();
+  searchHilite.redraw();
 }
 
 function addWms(reportId,wmsId,reportTitle) {
@@ -557,9 +588,10 @@ function addWms(reportId,wmsId,reportTitle) {
       if (!lyr.attributes) {
         lyr.attributes = {};
       }
-      lyr.attributes.reportId = reportId;
-      lyr.attributes.wmsId    = wmsId;
-      lyr.attributes.reportTitle = reportTitle
+      lyr.attributes.reportId    = reportId;
+      lyr.attributes.wmsId       = wmsId;
+      lyr.attributes.reportTitle = reportTitle;
+      lyr.attributes.where       = searchStore.getAt(searchIdx).get('where');
 
       lyr.events.register('loadstart',this,function(e) {
         var idx = layersStore.findBy(function(rec) {
