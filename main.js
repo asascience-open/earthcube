@@ -34,6 +34,7 @@ function init() {
       ,load : function(sto) {
         searchHilite.removeAllFeatures();
         syncMapWithResults(sto,searchShadow); 
+        searchShadow.setVisibility(true);
       }
       ,clear : function(sto) {
         searchHilite.removeAllFeatures();
@@ -217,7 +218,8 @@ function init() {
         }
       })
       ,listeners : {
-        mouseover : function(e,t) {
+        mouseover : function(e,t) { 
+          searchShadow.setVisibility(true);
           var row = this.getView().findRowIndex(t);
           if (row >= 0) {
             var rec = this.getStore().getAt(row);
@@ -228,17 +230,20 @@ function init() {
             }
           }
         }
-        ,mouseout : function(e,t) {
+        ,mouseout : function(e,t) { 
+          searchShadow.setVisibility(false);
           searchHilite.removeAllFeatures();
           searchHilite.redraw();
         }
       }
     })
-    ,listeners : {afterrender : function(cmp) {
-      cmp.addListener('resize',function(cmp,w) {
-        Ext.getCmp('searchText').setWidth(w - 7);
-      });
-    }}
+    ,listeners : {
+      afterrender : function(cmp) {
+        cmp.addListener('resize',function(cmp,w) {
+          Ext.getCmp('searchText').setWidth(w - 7);
+        });
+      }
+    }
   };
 
   layersStore = new Ext.data.ArrayStore({
@@ -384,11 +389,10 @@ function initMap() {
     ,{styleMap : new OpenLayers.StyleMap({
       'default' : new OpenLayers.Style(
         OpenLayers.Util.applyDefaults({
-           fillColor     : '#0000ff'
-          ,fillOpacity   : 0.02
+           fillOpacity   : 0
           ,strokeWidth   : 1
-          ,strokeColor   : '#0000ff'
-          ,strokeOpacity : 0.2
+          ,strokeColor   : '#888888'
+          ,strokeOpacity : 1
         })
       )
     })}
@@ -399,13 +403,14 @@ function initMap() {
     ,{styleMap : new OpenLayers.StyleMap({
       'default' : new OpenLayers.Style(
         OpenLayers.Util.applyDefaults({
-           fillOpacity   : 0
-          ,strokeWidth   : 2
-          ,strokeColor   : '#ff0000'
-          ,strokeOpacity : 0.75
+           fillOpacity   : 0.45
+          ,fillColor     : '#ffffff'
+          ,strokeWidth   : 1
+          ,strokeColor   : '#0000ff'
+          ,strokeOpacity : 1
           ,label         : "${title}"
           ,fontColor     : '#000000'
-          ,fontSize      : '13px'
+          ,fontSize      : '11px'
           ,fontFamily    : 'arial'
           ,fontWeight    : 'bold'
         })
@@ -448,6 +453,9 @@ function initMap() {
       ,status      : 'loading'
       ,reportTitle : e.layer.attributes.reportTitle
     }));
+    if (!e.layer.isBaseLayer) {
+      map.setLayerIndex(e.layer,map.layers.length - countTopLayers());
+    }
   });
   map.events.register('removelayer',this,function(e) {
     var idx = layersStore.findBy(function(rec) {
@@ -532,6 +540,7 @@ function removeWms(reportId,wmsId,name) {
 }
 
 function addWms(reportId,wmsId,reportTitle) {
+  searchShadow.setVisibility(false);
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     // check to see if it's been added already
@@ -576,6 +585,10 @@ function addWms(reportId,wmsId,reportTitle) {
       map.addLayer(lyr);
     }
   }
+}
+
+function countTopLayers() {
+  return 2;
 }
 
 function isoDateToDate(s) {
