@@ -320,7 +320,6 @@ function init() {
         mouseover : function(e,t) {
           var row = this.getView().findRowIndex(t);
           if (_.isNumber(row)) {
-            searchShadow.setVisibility(true);
             searchHilite.removeAllFeatures();
             var rec = this.getStore().getAt(row);
             if (rec) {
@@ -332,7 +331,6 @@ function init() {
         ,mouseout : function(e,t) {
           var row = this.getView().findRowIndex(t);
           if (_.isNumber(row)) {
-            searchShadow.setVisibility(false);
             searchHilite.removeAllFeatures();
             searchHilite.redraw();
           }
