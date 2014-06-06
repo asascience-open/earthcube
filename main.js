@@ -482,7 +482,7 @@ function initMap() {
       ,where       : e.layer.attributes.where
     }));
     if (!e.layer.isBaseLayer) {
-      map.setLayerIndex(e.layer,map.layers.length - countTopLayers());
+      map.setLayerIndex(e.layer,map.layers.length - countTopLayers() - 1);
     }
   });
   map.events.register('removelayer',this,function(e) {
