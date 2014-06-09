@@ -52,6 +52,7 @@ function init() {
     ,items           : new Ext.grid.GridPanel({
        disableSelection : true
       ,store            : searchStore
+      ,hideHeaders      : true
       ,columns          : [
 /*
         new Ext.grid.RowNumberer({
@@ -63,46 +64,52 @@ function init() {
           }
         })
 */
-        {id : 'title',dataIndex : 'title',header : 'Description'}
-        ,{id : 'when',dataIndex : 'when',header : 'When',width : 150,renderer : function(val,p,rec) {
-          var rows = [];
+        {id : 'title',dataIndex : 'title',header : 'Description',renderer : function(val,p,rec) {
+          var title = val;
+
+          val = rec.get('when');
+          var when = [];
           _.each(val,function(o) {
-            var minT = o.start; 
+            var minT = o.start;
             var maxT = o.end;
             if (minT != '' && maxT != '') {
               if (isoDateToDate(minT).format('mmm d, yyyy') == isoDateToDate(maxT).format('mmm d, yyyy')) {
-                rows.push(isoDateToDate(minT).format('mmm d, yyyy'));
+                when.push(isoDateToDate(minT).format('mmm d, yyyy'));
               }
               else if (isoDateToDate(minT).format('yyyy') == isoDateToDate(maxT).format('yyyy')) {
                 if (isoDateToDate(minT).format('mmm') == isoDateToDate(maxT).format('mmm')) {
-                  rows.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('d, yyyy'));
+                  when.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('d, yyyy'));
                 }
                 else {
-                  rows.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
+                  when.push(isoDateToDate(minT).format('mmm d') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
                 }
               }
               else {
-                rows.push(isoDateToDate(minT).format('mmm d, yyyy') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
+                when.push(isoDateToDate(minT).format('mmm d, yyyy') + ' - ' + isoDateToDate(maxT).format('mmm d, yyyy'));
               }
             }
           });
-          return rows.join('<br>');
+
+          return title + '<br>'
+            + '<p>' + when.join('<br>') + '</p>';
+ 
         }}
-        ,{dataIndex : 'wms',header : 'Raster',renderer : function(val,p,rec) {
-          var rows = [];
+        ,{renderer : function(val,p,rec) {
+          var val = rec.get('wms');
+          var wms = [];
           _.each(val,function(o) {
             var params = [rec.get('id'),o];
-            rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o + '</a>');
+            wms.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
           });
-          return rows.join('<br>');
-        }}
-        ,{dataIndex : 'vec',header : 'Vector',renderer : function(val,p,rec) {
-          var rows = [];
+
+          val = rec.get('vec');
+          var vec = [];
           _.each(val,function(o) {
             var params = [rec.get('id'),o];
-            rows.push('<a title="Add layer to map" class="link" href="javascript:addVec(\'' + params.join("','") + '\')">' + o + '</a>');
+            vec.push('<a title="Add layer to map" class="link" href="javascript:addVec(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
           });
-          return rows.join('<br>');
+
+          return wms.concat(vec).join('<br>');
         }}
         ,{align : 'center',width : 60,id : 'where',dataIndex : 'where',renderer : function(val,p,rec) {
           var bounds = new OpenLayers.Bounds();
@@ -110,12 +117,12 @@ function init() {
             bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
           });
           bounds.transform(proj4326,proj3857);
-          return '<a href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '</a><br>Zoom<br>map';
+          return '<a class="link" title="Zoom to coverage area" href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '<br>Zoom<br>map</br>';
         }}
         ,{align : 'center',width : 60,renderer : function(val,p,rec) {
           if (rec.get('node')) {
             var params = [rec.get('id'),Ext.id()];
-            return '<a href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
+            return '<a class="link" title="Download data" href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '<br>Download<br>data</a>';
           }
         }}
 /*
@@ -317,7 +324,7 @@ function init() {
             bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
           });
           bounds.transform(proj4326,proj3857);
-          return '<a href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '</a><br>Zoom<br>map';
+          return '<a class="link" title="Zoom to coverage area" href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '<br>Zoom<br>map</a>';
         }}
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
           var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
@@ -325,7 +332,7 @@ function init() {
             return '<a target=_blank href="' + rec.get('accessLinks')[0] + '">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
           }
           else {
-            return '<a href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '</a><br>Show<br>on map?';
+            return '<a class="link" title="Show / hide this layer on the map" href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '<br>Show<br>on map?</a>';
           }
         }}
       ]
@@ -425,6 +432,7 @@ function search(cmp,sto,searchText,start) {
           ,where  : report.where
           ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
           ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
+          ,vec    : false
           ,node   : node.isAccessible() ? node : false
         });
       }
@@ -432,7 +440,7 @@ function search(cmp,sto,searchText,start) {
       sto.loadData(data);
       cmp.getEl().unmask();
 
-      // go back and check for vector layers
+      // go back and check for vector layers (1st row for now0
       for (var i = 0; i < 1; i++) {
         var rec = sto.getAt(i);
         rec.get('node').olVector_Layer(function(resp) {
