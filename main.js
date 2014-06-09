@@ -90,8 +90,8 @@ function init() {
         ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
-            var params = [rec.get('id'),o.id];
-            rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o.name + '</a>');
+            var params = [rec.get('id'),o];
+            rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o + '</a>');
           });
           return rows.join('<br>');
         }}
@@ -415,7 +415,7 @@ function search(cmp,sto,searchText,start) {
           ,when   : report.when
           ,where  : report.where
           ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
-          ,wms    : _.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()})
+          ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
           ,node   : node.isAccessible() ? node : false
         });
       }
@@ -637,27 +637,26 @@ function addData(reportId,wmsId,reportTitle) {
   }
 }
 
-function addWms(reportId,wmsId) {
+function addWms(reportId,wmsName) {
   searchShadow.setVisibility(false);
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     // check to see if it's been added already
     var lyrIdx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == reportId && rec.get('wmsId') == wmsId;
+      return rec.get('reportId') == reportId && rec.get('name') == wmsName;
     });
     if (lyrIdx >= 0) {
       Ext.Msg.alert('Error',"We're sorry, but you have already added this layer to your map.");
       return false;
     }
     else {
-      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('wms'),{id : wmsId});
-
+      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('node').olWMS_Layer(),{name : wmsName});
       var rec = searchStore.getAt(searchIdx);
       if (!lyr.attributes) {
         lyr.attributes = {};
       }
       lyr.attributes.reportId    = reportId;
-      lyr.attributes.wmsId       = wmsId;
+      lyr.attributes.wmsId       = lyr.id;
       lyr.attributes.reportTitle = rec.get('title');;
       lyr.attributes.where       = rec.get('where');
 
