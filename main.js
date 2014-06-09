@@ -455,7 +455,7 @@ function initMap() {
         OpenLayers.Util.applyDefaults({
            fillOpacity   : 0.45
           ,fillColor     : '#ffffff'
-          ,strokeWidth   : 1
+          ,strokeWidth   : '${getStrokeWidth}'
           ,strokeColor   : '#0000ff'
           ,strokeOpacity : 1
           ,label         : "${title}"
@@ -464,6 +464,14 @@ function initMap() {
           ,fontFamily    : 'arial'
           ,fontWeight    : 'bold'
         })
+        ,{
+          context : {
+            getStrokeWidth : function(f) {
+              // Thicken up border if the bbox is tiny compared to the map.
+              return (f.geometry.getArea() / map.getExtent().toGeometry().getArea()) < 0.000001 ? 10 : 1;
+            }
+          }
+        }
       )
     })}
   );
