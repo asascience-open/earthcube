@@ -87,21 +87,28 @@ function init() {
           });
           return rows.join('<br>');
         }}
-        ,{header : 'Download',renderer : function(val,p,rec) {
-          if (rec.get('node')) {
-            var params = [rec.get('id'),Ext.id()];
-            return '<a title="Download data" class="link" href="javascript:addData(\'' + params.join("','") + '\')">' + 'Get data' + '</a>';
-          }
-        }}
-/*
-        ,{id : 'where',dataIndex : 'where',header : 'Where',renderer : function(val,p,rec) {
+        ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
-            rows.push(o.west + ',' + o.south + ',' + o.east + ',' + o.north);
+            var params = [rec.get('id'),o.id];
+            rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o.name + '</a>');
           });
           return rows.join('<br>');
         }}
-*/
+        ,{align : 'center',width : 60,id : 'where',dataIndex : 'where',renderer : function(val,p,rec) {
+          var bounds = new OpenLayers.Bounds();
+          _.each(val,function(o) {
+            bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
+          });
+          bounds.transform(proj4326,proj3857);
+          return '<a href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '</a><br>Zoom<br>map';
+        }}
+        ,{align : 'center',width : 60,renderer : function(val,p,rec) {
+          if (rec.get('node')) {
+            var params = [rec.get('id'),Ext.id()];
+            return '<a href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
+          }
+        }}
 /*
         ,{dataIndex : 'online',header : 'Protocol',renderer : function(val,p,rec) {
           var rows = [];
@@ -111,14 +118,6 @@ function init() {
           return rows.join('<br>');
         }}
 */
-        ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
-          var rows = [];
-          _.each(val,function(o) {
-            var params = [rec.get('id'),o.id];
-            rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o.name + '</a>');
-          });
-          return rows.join('<br>');
-        }}
 /*
         ,{dataIndex : 'online',header : 'Name',renderer : function(val,p,rec) {
           var rows = [];
@@ -302,6 +301,14 @@ function init() {
         }}
         ,{align : 'center',width : 30,dataIndex : 'status',renderer : function(val,p,rec) {
           return '<img ' + (val == 'loading' ? 'title="Loading..."' : '') + ' width=16 height=16 src="img/' + (val == 'loading' ? 'loading.gif' : 'blank.png') + '">';
+        }}
+        ,{align : 'center',id : 'where',width : 40,dataIndex : 'where',renderer : function(val,p,rec) {
+          var bounds = new OpenLayers.Bounds();
+          _.each(val,function(o) {
+            bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
+          });
+          bounds.transform(proj4326,proj3857);
+          return '<a href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '</a><br>Zoom<br>map';
         }}
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
           var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
@@ -553,22 +560,11 @@ function makeFeatures(rec) {
          type       : 'Feature'
         ,geometry   : g
         ,properties : {
-          title : wordwrap((rec.get('title') ? rec.get('title') : ''),20,"\n")
+          title : wordwrap((rec.get('title') ? rec.get('title').substr(0,100) + (rec.get('title').length > 100 ? '...' : '') : ''),20,"\n")
         }
       }]
     });
     f[0].geometry.transform(proj4326,proj3857);
-/*
-    // change geometry from polygon to line
-    if (f[0].geometry.getArea() == 0) {
-      f[0].geometry = f[0].geometry.getVertices()[0];
-    }
-    else {
-      var vertices = f[0].geometry.getVertices();
-      vertices.push(vertices[0]);
-      f[0].geometry = new OpenLayers.Geometry.LineString(vertices);
-    }
-*/
     features.push(f[0]);
   });
   return features;
@@ -580,11 +576,6 @@ function toggleWmsVisibility(reportId,wmsId,name) {
       o.setVisibility(!o.visibility);
     }
   });
-/*
-  searchShadow.setVisibility(false);
-  searchHilite.removeAllFeatures();
-  searchHilite.redraw();
-*/
 }
 
 function removeWms(reportId,wmsId,name) {
