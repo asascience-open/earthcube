@@ -89,7 +89,7 @@ function init() {
         }}
         ,{header : 'Download',renderer : function(val,p,rec) {
           if (rec.get('node')) {
-            var params = [rec.get('id'),Ext.id(),rec.get('title')];
+            var params = [rec.get('id'),Ext.id()];
             return '<a title="Download data" class="link" href="javascript:addData(\'' + params.join("','") + '\')">' + 'Get data' + '</a>';
           }
         }}
@@ -114,7 +114,7 @@ function init() {
         ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
-            var params = [rec.get('id'),o.id,rec.get('title')];
+            var params = [rec.get('id'),o.id];
             rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o.name + '</a>');
           });
           return rows.join('<br>');
@@ -617,21 +617,20 @@ function addData(reportId,wmsId,reportTitle) {
         ,new OpenLayers.Size(10,10)
       );
 
+      var rec = searchStore.getAt(searchIdx);
       if (!lyr.attributes) {
         lyr.attributes = {};
       }
       lyr.attributes.reportId    = reportId;
       lyr.attributes.wmsId       = wmsId;
-      lyr.attributes.reportTitle = reportTitle;
-      lyr.attributes.where       = searchStore.getAt(searchIdx).get('where');
+      lyr.attributes.reportTitle = rec.get('title');
+      lyr.attributes.where       = rec.get('where');
 
-      var node = searchStore.getAt(searchIdx).get('node');
+      var node = rec.get('node');
       node.accessOptions(function(resp) {
         lyr.attributes.accessOptions = resp;
-console.dir(resp);
         node.accessLink(function(resp) {
           lyr.attributes.accessLinks = resp;
-console.dir(resp);
           map.addLayer(lyr);
         },{},true);
       },true);
@@ -639,7 +638,7 @@ console.dir(resp);
   }
 }
 
-function addWms(reportId,wmsId,reportTitle) {
+function addWms(reportId,wmsId) {
   searchShadow.setVisibility(false);
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
@@ -654,13 +653,14 @@ function addWms(reportId,wmsId,reportTitle) {
     else {
       var lyr = _.findWhere(searchStore.getAt(searchIdx).get('wms'),{id : wmsId});
 
+      var rec = searchStore.getAt(searchIdx);
       if (!lyr.attributes) {
         lyr.attributes = {};
       }
       lyr.attributes.reportId    = reportId;
       lyr.attributes.wmsId       = wmsId;
-      lyr.attributes.reportTitle = reportTitle;
-      lyr.attributes.where       = searchStore.getAt(searchIdx).get('where');
+      lyr.attributes.reportTitle = rec.get('title');;
+      lyr.attributes.where       = rec.get('where');
 
       lyr.events.register('loadstart',this,function(e) {
         var idx = layersStore.findBy(function(rec) {
