@@ -22,6 +22,7 @@ function init() {
         ,{name : 'where'}
         ,{name : 'online'}
         ,{name : 'wms'}
+        ,{name : 'vec'}
         ,{name : 'node'}
       ]
     })
@@ -87,11 +88,19 @@ function init() {
           });
           return rows.join('<br>');
         }}
-        ,{dataIndex : 'wms',header : 'WMS',renderer : function(val,p,rec) {
+        ,{dataIndex : 'wms',header : 'Raster',renderer : function(val,p,rec) {
           var rows = [];
           _.each(val,function(o) {
             var params = [rec.get('id'),o];
             rows.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + o + '</a>');
+          });
+          return rows.join('<br>');
+        }}
+        ,{dataIndex : 'vec',header : 'Vector',renderer : function(val,p,rec) {
+          var rows = [];
+          _.each(val,function(o) {
+            var params = [rec.get('id'),o];
+            rows.push('<a title="Add layer to map" class="link" href="javascript:addVec(\'' + params.join("','") + '\')">' + o + '</a>');
           });
           return rows.join('<br>');
         }}
@@ -257,7 +266,7 @@ function init() {
   layersStore = new Ext.data.ArrayStore({
     fields : [
        {name : 'reportId'}
-      ,{name : 'wmsId'}
+      ,{name : 'lyrId'}
       ,{name : 'name'}
       ,{name : 'status'}
       ,{name : 'reportTitle'}
@@ -270,12 +279,12 @@ function init() {
     ,listeners : {
       add : function(sto) {
         if (sto.getCount() > 0) {
-          Ext.getCmp('layersMsg').setText(sto.getCount() + ' active dataset(s)');
+          Ext.getCmp('layersMsg').setText('Displaying datasets ' + 1 + ' - ' + sto.getCount() + ' of ' + sto.getCount());
         }
       }
       ,remove : function(sto) {
         if (sto.getCount() == 0) {
-          Ext.getCmp('layersMsg').setText('No active layers');
+          Ext.getCmp('layersMsg').setText('No datasets to display');
         }
       }
     }
@@ -293,7 +302,7 @@ function init() {
       ,disableSelection : true
       ,columns          : [
         {align : 'center',width : 40,renderer : function(val,p,rec) {
-          var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
+          var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
           return '<a href="javascript:removeWms(\'' + params.join("','") + '\')">' + '<img class="link" title="Remove layer" src="img/remove.png">' + '</a>';
         }}
         ,{id : 'name',dataIndex : 'name',header : 'Name',renderer : function(val,p,rec) {
@@ -311,7 +320,7 @@ function init() {
           return '<a href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '</a><br>Zoom<br>map';
         }}
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
-          var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
+          var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
           if (rec.get('accessLinks')) {
             return '<a target=_blank href="' + rec.get('accessLinks')[0] + '">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
           }
@@ -323,7 +332,7 @@ function init() {
       ,autoExpandColumn : 'name'
       ,hideHeaders      : true
       ,tbar             : [{text : 'Click on a link from your search results to add to your list.'}]
-      ,bbar             : ['->',{text : 'No active datasets',id : 'layersMsg'}]
+      ,bbar             : ['->',{text : 'No datasets to display',id : 'layersMsg'}]
       ,listeners : {
         mouseover : function(e,t) {
           var row = this.getView().findRowIndex(t);
@@ -422,6 +431,15 @@ function search(cmp,sto,searchText,start) {
       sto.setBaseParam('start',start ? start : 1);
       sto.loadData(data);
       cmp.getEl().unmask();
+
+      // go back and check for vector layers
+      for (var i = 0; i < 1; i++) {
+        var rec = sto.getAt(i);
+        rec.get('node').olVector_Layer(function(resp) {
+          rec.set('vec',_.pluck(_.sortBy(resp,function(o){return o.name.toLowerCase()}),'name'));
+          rec.commit();
+        },true);
+      }
     }
     ,{
       what : searchText
@@ -506,7 +524,7 @@ function initMap() {
   map.events.register('addlayer',this,function(e) {
     layersStore.add(new layersStore.recordType({
        reportId      : e.layer.attributes.reportId
-      ,wmsId         : e.layer.attributes.wmsId
+      ,lyrId         : e.layer.attributes.lyrId
       ,name          : e.layer.name
       ,status        : (e.layer.attributes.accessLinks ? e.layer.attributes.accessLinks : 'loading')
       ,reportTitle   : e.layer.attributes.reportTitle
@@ -526,7 +544,7 @@ function initMap() {
   });
   map.events.register('removelayer',this,function(e) {
     var idx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == e.layer.attributes.reportId && rec.get('wmsId') == e.layer.attributes.wmsId;
+      return rec.get('reportId') == e.layer.attributes.reportId && rec.get('lyrId') == e.layer.attributes.lyrId;
     });
     if (idx >= 0) {
       layersStore.removeAt(idx);
@@ -578,17 +596,17 @@ function makeFeatures(rec) {
   return features;
 }
 
-function toggleWmsVisibility(reportId,wmsId,name) {
+function toggleWmsVisibility(reportId,lyrId,name) {
   _.each(map.getLayersByName(name),function(o) {
-    if (o.attributes.reportId == reportId && o.attributes.wmsId == wmsId) {
+    if (o.attributes.reportId == reportId && o.attributes.lyrId == lyrId) {
       o.setVisibility(!o.visibility);
     }
   });
 }
 
-function removeWms(reportId,wmsId,name) {
+function removeWms(reportId,lyrId,name) {
   _.each(map.getLayersByName(name),function(o) {
-    if (o.attributes.reportId == reportId && o.attributes.wmsId == wmsId) {
+    if (o.attributes.reportId == reportId && o.attributes.lyrId == lyrId) {
       map.removeLayer(o);
     }
   });
@@ -597,12 +615,12 @@ function removeWms(reportId,wmsId,name) {
   searchHilite.redraw();
 }
 
-function addData(reportId,wmsId,reportTitle) { 
+function addData(reportId,lyrId,reportTitle) { 
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     // check to see if it's been added already
     var lyrIdx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == reportId && rec.get('wmsId') == wmsId;
+      return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
     });
     if (lyrIdx >= 0) {
       Ext.Msg.alert('Error',"We're sorry, but you have already added this dataset to your list.");
@@ -610,7 +628,7 @@ function addData(reportId,wmsId,reportTitle) {
     }
     else {
       var lyr = new OpenLayers.Layer.Image(
-         wmsId
+         lyrId
         ,'img/blank.png'
         ,new OpenLayers.Bounds(0,0,0,0)
         ,new OpenLayers.Size(10,10)
@@ -621,7 +639,7 @@ function addData(reportId,wmsId,reportTitle) {
         lyr.attributes = {};
       }
       lyr.attributes.reportId    = reportId;
-      lyr.attributes.wmsId       = wmsId;
+      lyr.attributes.lyrId       = lyrId;
       lyr.attributes.reportTitle = rec.get('title');
       lyr.attributes.where       = rec.get('where');
 
@@ -637,32 +655,106 @@ function addData(reportId,wmsId,reportTitle) {
   }
 }
 
-function addWms(reportId,wmsName) {
+function addVec(reportId,lyrName) {
   searchShadow.setVisibility(false);
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     // check to see if it's been added already
     var lyrIdx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == reportId && rec.get('name') == wmsName;
+      return rec.get('reportId') == reportId && rec.get('name') == lyrName;
     });
     if (lyrIdx >= 0) {
       Ext.Msg.alert('Error',"We're sorry, but you have already added this layer to your map.");
       return false;
     }
     else {
-      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('node').olWMS_Layer(),{name : wmsName});
+      searchStore.getAt(searchIdx).get('node').olVector_Layer(function(resp) {
+        var lyr = _.findWhere(resp,{name : lyrName});
+
+        lyr.projection = proj4326;
+        lyr.styleMap   = new OpenLayers.StyleMap({
+          'default' : new OpenLayers.Style(
+            OpenLayers.Util.applyDefaults({
+               fillOpacity   : 0
+              ,strokeWidth   : 3
+              ,strokeColor   : '#ff0000'
+              ,strokeOpacity : 1
+            })
+          )
+        });
+
+        var rec = searchStore.getAt(searchIdx);
+        if (!lyr.attributes) {
+          lyr.attributes = {};
+        }
+        lyr.attributes.reportId    = reportId;
+        lyr.attributes.lyrId       = lyr.id;
+        lyr.attributes.reportTitle = rec.get('title');;
+        lyr.attributes.where       = rec.get('where');
+
+        lyr.events.register('loadstart',this,function(e) {
+          var idx = layersStore.findBy(function(rec) {
+            return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
+          });
+          if (idx >= 0) {
+            var rec = layersStore.getAt(idx);
+            rec.set('status','loading');
+            rec.commit();
+          }
+        });
+        lyr.events.register('loadend',this,function(e) {
+          var idx = layersStore.findBy(function(rec) {
+            return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
+          });
+          if (idx >= 0) {
+            var rec = layersStore.getAt(idx);
+            rec.set('status','');
+            rec.commit();
+          }
+        });
+        lyr.events.register('visibilitychanged',this,function(e) {
+          var idx = layersStore.findBy(function(rec) {
+            return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
+          });
+          if (idx >= 0) {
+            var rec = layersStore.getAt(idx);
+            rec.set('visibility',e.object.visibility ? 'visible' : 'invisible');
+            rec.commit();
+          }
+        });
+
+        map.addLayer(lyr);
+      },true);
+    }
+  }
+}
+
+function addWms(reportId,lyrName) {
+  searchShadow.setVisibility(false);
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    // check to see if it's been added already
+    var lyrIdx = layersStore.findBy(function(rec) {
+      return rec.get('reportId') == reportId && rec.get('name') == lyrName;
+    });
+    if (lyrIdx >= 0) {
+      Ext.Msg.alert('Error',"We're sorry, but you have already added this layer to your map.");
+      return false;
+    }
+    else {
+      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('node').olWMS_Layer(),{name : lyrName});
       var rec = searchStore.getAt(searchIdx);
       if (!lyr.attributes) {
         lyr.attributes = {};
       }
       lyr.attributes.reportId    = reportId;
-      lyr.attributes.wmsId       = lyr.id;
+      lyr.attributes.lyrId       = lyr.id;
       lyr.attributes.reportTitle = rec.get('title');;
       lyr.attributes.where       = rec.get('where');
 
       lyr.events.register('loadstart',this,function(e) {
         var idx = layersStore.findBy(function(rec) {
-          return rec.get('reportId') == e.object.attributes.reportId && rec.get('wmsId') == e.object.attributes.wmsId;
+          return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
         });
         if (idx >= 0) {
           var rec = layersStore.getAt(idx);
@@ -672,7 +764,7 @@ function addWms(reportId,wmsName) {
       });
       lyr.events.register('loadend',this,function(e) {
         var idx = layersStore.findBy(function(rec) {
-          return rec.get('reportId') == e.object.attributes.reportId && rec.get('wmsId') == e.object.attributes.wmsId;
+          return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
         });
         if (idx >= 0) {
           var rec = layersStore.getAt(idx);
@@ -682,7 +774,7 @@ function addWms(reportId,wmsName) {
       });
       lyr.events.register('visibilitychanged',this,function(e) {
         var idx = layersStore.findBy(function(rec) {
-          return rec.get('reportId') == e.object.attributes.reportId && rec.get('wmsId') == e.object.attributes.wmsId;
+          return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
         });
         if (idx >= 0) {
           var rec = layersStore.getAt(idx);
