@@ -264,7 +264,8 @@ function init() {
       ,{name : 'reportTitle'}
       ,{name : 'where'}
       ,{name : 'visibility'}
-      ,{name : 'accessLink'}
+      ,{name : 'accessLinks'}
+      ,{name : 'accessOptions'}
       ,{name : 'rank'}
     ]
     ,listeners : {
@@ -304,8 +305,8 @@ function init() {
         }}
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
           var params = [rec.get('reportId'),rec.get('wmsId'),rec.get('name')];
-          if (rec.get('accessLink')) {
-            return '<a target=_blank href="' + rec.get('accessLink') + '">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
+          if (rec.get('accessLinks')) {
+            return '<a target=_blank href="' + rec.get('accessLinks')[0] + '">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
           }
           else {
             return '<a href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '</a><br>Show<br>on map?';
@@ -389,7 +390,7 @@ function init() {
 function search(cmp,sto,searchText,start) {
   cmp.getEl().mask('<table class="maskText"><tr><td>Loading...&nbsp;</td><td><img src="./lib/ext-3.4.1/resources/images/default/grid/loading.gif"></td></tr></table>');
   sto.removeAll();
-  GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-100/').discover(
+  GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/').discover(
     function(result) {
       var data = {
          results : 0
@@ -489,15 +490,16 @@ function initMap() {
 
   map.events.register('addlayer',this,function(e) {
     layersStore.add(new layersStore.recordType({
-       reportId    : e.layer.attributes.reportId
-      ,wmsId       : e.layer.attributes.wmsId
-      ,name        : e.layer.name
-      ,status      : (e.layer.attributes.accessLink ? e.layer.attributes.accessLink : 'loading')
-      ,reportTitle : e.layer.attributes.reportTitle
-      ,where       : e.layer.attributes.where
-      ,visibility  : 'visible'
-      ,accessLink  : e.layer.attributes.accessLink
-      ,rank        : e.layer.attributes.accessLink ? 1 : 0
+       reportId      : e.layer.attributes.reportId
+      ,wmsId         : e.layer.attributes.wmsId
+      ,name          : e.layer.name
+      ,status        : (e.layer.attributes.accessLinks ? e.layer.attributes.accessLinks : 'loading')
+      ,reportTitle   : e.layer.attributes.reportTitle
+      ,where         : e.layer.attributes.where
+      ,visibility    : 'visible'
+      ,accessLinks   : e.layer.attributes.accessLinks
+      ,accessOptions : e.layer.attributes.accessOptions
+      ,rank          : e.layer.attributes.accessLinks ? 1 : 0
     }));
     layersStore.sort(
        [{field : 'rank'},{field : 'reportTitle'},{field : 'name'}]
@@ -623,10 +625,16 @@ function addData(reportId,wmsId,reportTitle) {
       lyr.attributes.reportTitle = reportTitle;
       lyr.attributes.where       = searchStore.getAt(searchIdx).get('where');
 
-      searchStore.getAt(searchIdx).get('node').accessLink(function(resp) {
-        lyr.attributes.accessLink = resp;
-        map.addLayer(lyr);
-      });
+      var node = searchStore.getAt(searchIdx).get('node');
+      node.accessOptions(function(resp) {
+        lyr.attributes.accessOptions = resp;
+console.dir(resp);
+        node.accessLink(function(resp) {
+          lyr.attributes.accessLinks = resp;
+console.dir(resp);
+          map.addLayer(lyr);
+        },{},true);
+      },true);
     }
   }
 }
