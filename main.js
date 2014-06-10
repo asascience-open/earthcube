@@ -280,6 +280,7 @@ function init() {
       ,{name : 'where'}
       ,{name : 'visibility'}
       ,{name : 'isAccessible'}
+      ,{name : 'getData'}
       ,{name : 'rank'}
     ]
     ,listeners : {
@@ -328,7 +329,7 @@ function init() {
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
           var params = [rec.get('reportId')];
           if (rec.get('isAccessible')) {
-            return '<a class="link" title="Download data" href="javascript:getData(\'' + params.join("','") + '\')">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '<br>Download<br>data</a>';
+            return '<a target=_blank class="link" title="Download link" href="' + rec.get('getData') + '">' + '<img class="link" title="Download link" width=16 height=16 src="img/download.png">' + '<br>Download<br>link</a>';
           }
           else {
             return '<a class="link" title="Show / hide this layer on the map" href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '<br>Show<br>on map?</a>';
@@ -529,6 +530,7 @@ function initMap() {
       ,where         : e.layer.attributes.where
       ,visibility    : 'visible'
       ,isAccessible  : e.layer.attributes.isAccessible
+      ,getData       : '#'
       ,rank          : e.layer.attributes.isAccessible ? 1 : 0
     }));
     layersStore.sort(
@@ -642,6 +644,7 @@ function addData(reportId,lyrId) {
       lyr.attributes.isAccessible = rec.get('node').isAccessible();
 
       map.addLayer(lyr);
+      getData(reportId,lyrId);
     }
   }
 }
@@ -779,7 +782,7 @@ function addWms(reportId,lyrName) {
   }
 }
 
-function getData(reportId) {
+function getData(reportId,lyrId) {
   var searchIdx = searchStore.findExact(reportId);
   if (searchIdx >= 0) {
     var node = searchStore.getAt(searchIdx).get('node');
@@ -808,7 +811,7 @@ function getData(reportId) {
       });
 
       var win = new Ext.Window({
-         title           : 'Download parameters'
+         title           : 'Build download link'
         ,layout          : 'fit'
         ,width           : 345
         ,height          : 400
@@ -822,6 +825,7 @@ function getData(reportId) {
           ,items          : [
             new Ext.form.ComboBox({
                store          : sto
+              ,id             : 'presets'
               ,forceSelection : true
               ,triggerAction  : 'all'
               ,selectOnFocus  : true
@@ -829,6 +833,7 @@ function getData(reportId) {
               ,displayField   : 'lbl'
               ,valueField     : 'id'
               ,fieldLabel     : 'Presets'
+              ,listWidth      : 300
               ,listeners      : {select : function(cmp,rec) {
                 _.each(['name','crs','rasterFormat'],function(o) {
                   Ext.getCmp(o).setValue(rec.get(o));
@@ -913,6 +918,7 @@ function getData(reportId) {
             {
                text    : 'Cancel'
               ,handler : function() {
+                removeWms(reportId,lyrId,lyrId);
                 win.close();
               }
             } 
@@ -920,7 +926,14 @@ function getData(reportId) {
                text    : 'OK'
               ,handler : function() {
                 node.accessLink(function(resp) {
-                  console.log(resp);
+                  var idx = layersStore.findBy(function(rec) {
+                    return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
+                  });
+                  if (idx >= 0) {
+                    var rec = layersStore.getAt(idx);
+                    rec.set('getData',resp);
+                    rec.commit();
+                  }
                   win.close();
                 }
                 ,{
@@ -930,6 +943,12 @@ function getData(reportId) {
               }
             }
           ]
+          ,listeners : {afterrender : function() {
+            if (sto.getCount() > 0) {
+              Ext.getCmp('presets').setValue(0);
+              Ext.getCmp('presets').fireEvent('select',null,sto.getAt(0));
+            }
+          }}
         })
       });
       win.show();
