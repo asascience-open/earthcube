@@ -279,8 +279,7 @@ function init() {
       ,{name : 'reportTitle'}
       ,{name : 'where'}
       ,{name : 'visibility'}
-      ,{name : 'accessLinks'}
-      ,{name : 'accessOptions'}
+      ,{name : 'isAccessible'}
       ,{name : 'rank'}
     ]
     ,listeners : {
@@ -327,9 +326,9 @@ function init() {
           return '<a class="link" title="Zoom to coverage area" href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '<br>Zoom<br>map</a>';
         }}
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
-          var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
-          if (rec.get('accessLinks')) {
-            return '<a target=_blank href="' + rec.get('accessLinks')[0] + '">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '</a><br>Download<br>data';
+          var params = [rec.get('reportId')];
+          if (rec.get('isAccessible')) {
+            return '<a class="link" title="Download data" href="javascript:getData(\'' + params.join("','") + '\')">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '<br>Download<br>data</a>';
           }
           else {
             return '<a class="link" title="Show / hide this layer on the map" href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '<br>Show<br>on map?</a>';
@@ -432,22 +431,13 @@ function search(cmp,sto,searchText,start) {
           ,where  : report.where
           ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
           ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
-          ,vec    : false
+          ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
           ,node   : node.isAccessible() ? node : false
         });
       }
       sto.setBaseParam('start',start ? start : 1);
       sto.loadData(data);
       cmp.getEl().unmask();
-
-      // go back and check for vector layers (1st row for now0
-      for (var i = 0; i < 1; i++) {
-        var rec = sto.getAt(i);
-        rec.get('node').olVector_Layer(function(resp) {
-          rec.set('vec',_.pluck(_.sortBy(resp,function(o){return o.name.toLowerCase()}),'name'));
-          rec.commit();
-        },true);
-      }
     }
     ,{
       what : searchText
@@ -534,13 +524,12 @@ function initMap() {
        reportId      : e.layer.attributes.reportId
       ,lyrId         : e.layer.attributes.lyrId
       ,name          : e.layer.name
-      ,status        : (e.layer.attributes.accessLinks ? e.layer.attributes.accessLinks : 'loading')
+      ,status        : (e.layer.attributes.isAccessible ? e.layer.attributes.isAccessible : 'loading')
       ,reportTitle   : e.layer.attributes.reportTitle
       ,where         : e.layer.attributes.where
       ,visibility    : 'visible'
-      ,accessLinks   : e.layer.attributes.accessLinks
-      ,accessOptions : e.layer.attributes.accessOptions
-      ,rank          : e.layer.attributes.accessLinks ? 1 : 0
+      ,isAccessible  : e.layer.attributes.isAccessible
+      ,rank          : e.layer.attributes.isAccessible ? 1 : 0
     }));
     layersStore.sort(
        [{field : 'rank'},{field : 'reportTitle'},{field : 'name'}]
@@ -623,7 +612,7 @@ function removeWms(reportId,lyrId,name) {
   searchHilite.redraw();
 }
 
-function addData(reportId,lyrId,reportTitle) { 
+function addData(reportId,lyrId) {
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     // check to see if it's been added already
@@ -646,19 +635,13 @@ function addData(reportId,lyrId,reportTitle) {
       if (!lyr.attributes) {
         lyr.attributes = {};
       }
-      lyr.attributes.reportId    = reportId;
-      lyr.attributes.lyrId       = lyrId;
-      lyr.attributes.reportTitle = rec.get('title');
-      lyr.attributes.where       = rec.get('where');
+      lyr.attributes.reportId     = reportId;
+      lyr.attributes.lyrId        = lyrId;
+      lyr.attributes.reportTitle  = rec.get('title');
+      lyr.attributes.where        = rec.get('where');
+      lyr.attributes.isAccessible = rec.get('node').isAccessible();
 
-      var node = rec.get('node');
-      node.accessOptions(function(resp) {
-        lyr.attributes.accessOptions = resp;
-        node.accessLink(function(resp) {
-          lyr.attributes.accessLinks = resp;
-          map.addLayer(lyr);
-        },{},true);
-      },true);
+      map.addLayer(lyr);
     }
   }
 }
@@ -793,6 +776,164 @@ function addWms(reportId,lyrName) {
 
       map.addLayer(lyr);
     }
+  }
+}
+
+function getData(reportId) {
+  var searchIdx = searchStore.findExact(reportId);
+  if (searchIdx >= 0) {
+    var node = searchStore.getAt(searchIdx).get('node');
+    node.accessOptions(function(resp) {
+      var data = [];
+      _.each(resp,function(accessOptions) {
+        _.each(_.sortBy(accessOptions.validOptions,function(o){return o.name.toLowerCase() + o.crs.toLowerCase() + o.rasterFormat.toLowerCase()}),function(o) {
+          data.push([
+             data.length
+            ,accessOptions.defaultOptions
+            ,o.name
+            ,o.crs
+            ,o.linkage
+            ,o.protocol
+            ,o.rasterFormat
+            ,o.resampling
+            ,o.subsetting
+            ,[o.name,o.crs,o.rasterFormat].join(', ')
+          ]);
+        });
+      });
+
+      var sto = new Ext.data.ArrayStore({
+         fields : ['id','defaultOptions','name','crs','linkage','protocol','rasterFormat','resampling','subsetting','lbl']
+        ,data   : data
+      });
+
+      var win = new Ext.Window({
+         title           : 'Download parameters'
+        ,layout          : 'fit'
+        ,width           : 345
+        ,height          : 400
+        ,constrainHeader : true
+        ,modal           : true
+        ,items           : new Ext.FormPanel({
+           bodyStyle      : 'padding:6'
+          ,defaults       : {border : false,width : 200}
+          ,labelSeparator : ''
+          ,id             : 'downloadParamGridTable'
+          ,items          : [
+            new Ext.form.ComboBox({
+               store          : sto
+              ,forceSelection : true
+              ,triggerAction  : 'all'
+              ,selectOnFocus  : true
+              ,mode           : 'local'
+              ,displayField   : 'lbl'
+              ,valueField     : 'id'
+              ,fieldLabel     : 'Presets'
+              ,listeners      : {select : function(cmp,rec) {
+                _.each(['name','crs','rasterFormat'],function(o) {
+                  Ext.getCmp(o).setValue(rec.get(o));
+                });
+                _.each(['west','south','east','north','from','to'],function(o) {
+                  rec.get('subsetting') ? Ext.getCmp(o).enable() : Ext.getCmp(o).disable();
+                });
+                _.each(['lonResolution','latResolution'],function(o) {
+                  rec.get('resampling') ? Ext.getCmp(o).enable() : Ext.getCmp(o).disable();
+                });
+                _.each(['name','crs','rasterFormat'],function(o) {
+                  rec.get('defaultOptions')[o] ? Ext.getCmp(o).setValue(rec.get('defaultOptions')[o]) : false;
+                });
+                _.each(['lonResolution','latResolution'],function(o) {
+                  rec.get('defaultOptions').resolution ? Ext.getCmp(o).setValue(rec.get('defaultOptions').resolution[o]) : false;
+                });
+                _.each(['west','south','east','north'],function(o) {
+                  rec.get('defaultOptions').spatialSubset ? Ext.getCmp(o).setValue(rec.get('defaultOptions').spatialSubset[o]) : false;
+                });
+                _.each(['from','to'],function(o) {
+                  rec.get('defaultOptions').temporalSubset ? Ext.getCmp(o).setValue(rec.get('defaultOptions').temporalSubset[o]) : false;
+                });
+              }}
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Name'
+              ,id         : 'name'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'CRS'
+              ,id         : 'crs'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Format'
+              ,id         : 'rasterFormat'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Min longitude'
+              ,id         : 'west'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Min latitude'
+              ,id         : 'south'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Max longitude'
+              ,id         : 'east'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Max latitude'
+              ,id         : 'north'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Longitude res.'
+              ,id         : 'lonResolution'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Latitude res.'
+              ,id         : 'latResolution'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Time from'
+              ,id         : 'from'
+              ,disabled   : true
+            })
+            ,new Ext.form.TextField({
+               fieldLabel : 'Time to'
+              ,id         : 'to'
+              ,disabled   : true
+            })
+          ]
+          ,buttons : [
+            {
+               text    : 'Cancel'
+              ,handler : function() {
+                win.close();
+              }
+            } 
+            ,{
+               text    : 'OK'
+              ,handler : function() {
+                node.accessLink(function(resp) {
+                  console.log(resp);
+                  win.close();
+                }
+                ,{
+                   crs          : Ext.getCmp('crs').getValue()
+                  ,rasterFormat : Ext.getCmp('rasterFormat').getValue()
+                });
+              }
+            }
+          ]
+        })
+      });
+      win.show();
+    },true);
   }
 }
 
