@@ -925,7 +925,8 @@ function getData(reportId,lyrId) {
             ,{
                text    : 'OK'
               ,handler : function() {
-                var options = {};
+                var sto = Ext.getCmp('presets').getStore();
+                var options = sto.getAt(sto.findExact('id',Ext.getCmp('presets').getValue())).get('defaultOptions');
                 _.each(['name','crs','rasterFormat'],function(o) {
                   options[o] = Ext.getCmp(o).getValue();
                 });
@@ -953,7 +954,6 @@ function getData(reportId,lyrId) {
                     options['resolution'][o] = Ext.getCmp(o).getValue();
                   }
                 });
-console.dir(options);
                 node.accessLink(function(resp) {
                   var idx = layersStore.findBy(function(rec) {
                     return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
