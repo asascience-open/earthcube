@@ -327,7 +327,7 @@ function init() {
           return '<a class="link" title="Zoom to coverage area" href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '<br>Zoom<br>map</a>';
         }}
         ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
-          var params = [rec.get('reportId')];
+          var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
           if (rec.get('isAccessible')) {
             return '<a target=_blank class="link" title="Download link" href="' + rec.get('getData') + '">' + '<img class="link" title="Download link" width=16 height=16 src="img/download.png">' + '<br>Download<br>link</a>';
           }
