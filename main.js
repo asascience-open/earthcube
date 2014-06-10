@@ -844,9 +844,6 @@ function getData(reportId,lyrId) {
                 _.each(['lonResolution','latResolution'],function(o) {
                   rec.get('resampling') ? Ext.getCmp(o).enable() : Ext.getCmp(o).disable();
                 });
-                _.each(['name','crs','rasterFormat'],function(o) {
-                  Ext.getCmp(o).setValue(rec.get('defaultOptions')[o] ? rec.get('defaultOptions')[o] : '');
-                });
                 _.each(['lonResolution','latResolution'],function(o) {
                   Ext.getCmp(o).setValue(rec.get('defaultOptions').resolution ? rec.get('defaultOptions').resolution[o] : '');
                 });
@@ -954,6 +951,7 @@ function getData(reportId,lyrId) {
                     options['resolution'][o] = Ext.getCmp(o).getValue();
                   }
                 });
+                console.dir(options);
                 node.accessLink(function(resp) {
                   var idx = layersStore.findBy(function(rec) {
                     return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
