@@ -122,7 +122,7 @@ function init() {
         ,{align : 'center',width : 60,renderer : function(val,p,rec) {
           if (rec.get('node')) {
             var params = [rec.get('id'),Ext.id()];
-            return '<a class="link" title="Download data" href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Download data" width=16 height=16 src="img/download.png">' + '<br>Download<br>data</a>';
+            return '<a class="link" title="Access data" href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Access data" width=16 height=16 src="img/data_chooser.png">' + '<br>Access<br>data</a>';
           }
         }}
 /*
@@ -845,16 +845,16 @@ function getData(reportId,lyrId) {
                   rec.get('resampling') ? Ext.getCmp(o).enable() : Ext.getCmp(o).disable();
                 });
                 _.each(['name','crs','rasterFormat'],function(o) {
-                  rec.get('defaultOptions')[o] ? Ext.getCmp(o).setValue(rec.get('defaultOptions')[o]) : false;
+                  Ext.getCmp(o).setValue(rec.get('defaultOptions')[o] ? rec.get('defaultOptions')[o] : '');
                 });
                 _.each(['lonResolution','latResolution'],function(o) {
-                  rec.get('defaultOptions').resolution ? Ext.getCmp(o).setValue(rec.get('defaultOptions').resolution[o]) : false;
+                  Ext.getCmp(o).setValue(rec.get('defaultOptions').resolution ? rec.get('defaultOptions').resolution[o] : '');
                 });
                 _.each(['west','south','east','north'],function(o) {
-                  rec.get('defaultOptions').spatialSubset ? Ext.getCmp(o).setValue(rec.get('defaultOptions').spatialSubset[o]) : false;
+                  Ext.getCmp(o).setValue(rec.get('defaultOptions').spatialSubset ? rec.get('defaultOptions').spatialSubset[o] : '');
                 });
                 _.each(['from','to'],function(o) {
-                  rec.get('defaultOptions').temporalSubset ? Ext.getCmp(o).setValue(rec.get('defaultOptions').temporalSubset[o]) : false;
+                  Ext.getCmp(o).setValue(rec.get('defaultOptions').temporalSubset ? rec.get('defaultOptions').temporalSubset[o] : '');
                 });
               }}
             })
@@ -925,6 +925,35 @@ function getData(reportId,lyrId) {
             ,{
                text    : 'OK'
               ,handler : function() {
+                var options = {};
+                _.each(['name','crs','rasterFormat'],function(o) {
+                  options[o] = Ext.getCmp(o).getValue();
+                });
+                _.each(['west','south','east','north'],function(o) {
+                  if (!_.isEmpty(Ext.getCmp(o).getValue())) {
+                    if (!options['spatialSubset']) {
+                      options['spatialSubset'] = {};
+                    }
+                    options['spatialSubset'][o] = Ext.getCmp(o).getValue();
+                  }
+                });
+                _.each(['from','to'],function(o) {
+                  if (!_.isEmpty(Ext.getCmp(o).getValue())) {
+                    if (!options['temporalSubset']) {
+                      options['temporalSubset'] = {};
+                    }
+                    options['temporalSubset'][o] = Ext.getCmp(o).getValue();
+                  }
+                });
+                _.each(['lonResolution','latResolution'],function(o) {
+                  if (!_.isEmpty(Ext.getCmp(o).getValue())) {
+                    if (!options['resolution']) {
+                      options['resolution'] = {};
+                    }
+                    options['resolution'][o] = Ext.getCmp(o).getValue();
+                  }
+                });
+console.dir(options);
                 node.accessLink(function(resp) {
                   var idx = layersStore.findBy(function(rec) {
                     return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
@@ -935,11 +964,7 @@ function getData(reportId,lyrId) {
                     rec.commit();
                   }
                   win.close();
-                }
-                ,{
-                   crs          : Ext.getCmp('crs').getValue()
-                  ,rasterFormat : Ext.getCmp('rasterFormat').getValue()
-                });
+                },options);
               }
             }
           ]
