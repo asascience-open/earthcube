@@ -783,7 +783,7 @@ function addWms(reportId,lyrName) {
 }
 
 function getData(reportId,lyrId) {
-  var searchIdx = searchStore.findExact(reportId);
+  var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     var node = searchStore.getAt(searchIdx).get('node');
     node.accessOptions(function(resp) {
