@@ -60,19 +60,19 @@ nav ul li a {
 }
 
 nav a:first-child .tab  {
-	background: url('img/grey_map_view_tab.png') no-repeat;
-}
-
-nav a:last-child .tab {
 	background: url('img/grey_catalogue_tab.png') no-repeat;
 }
 
+nav a:last-child .tab {
+	background: url('img/grey_map_view_tab.png') no-repeat;
+}
+
 nav a:first-child .tab.active {
-	background: url('img/blue_map_view_tab.png') no-repeat;
+	background: url('img/blue_catalogue_tab.png') no-repeat;
 }
 
 nav a:last-child .tab.active {
-	background: url('img/blue_catalogue_tab.png') no-repeat;
+	background: url('img/blue_map_view_tab.png') no-repeat;
 }
 
 #search {
