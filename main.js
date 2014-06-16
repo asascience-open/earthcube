@@ -36,7 +36,9 @@ function init() {
           ,sto
           ,Ext.getCmp('searchText').getValue()
           ,opt.params ? opt.params.start : 1
-          ,Ext.getCmp('restrictToBbox').pressed
+          ,map.searchBbox
+          ,map.searchBeginDate
+          ,map.searchEndDate
         );
       }
       ,load : function(sto) {
@@ -195,13 +197,172 @@ function init() {
         })
         ,'->'
         ,{
-           id            : 'restrictToBbox'
-          ,text          : 'Restrict search results to map?'
-          ,enableToggle  : true
-          ,pressed       : true
-          ,toggleHandler : function(cmp) {
-            Ext.getCmp('searchText').onTrigger2Click();
-          }
+           id           : 'restrictGeoSearchButton'
+          ,text         : 'Select a geographic filter'
+          ,allowDepress : false
+          ,icon         : 'img/zoom.png'
+          ,menu         : {id : 'restrictGeoSearchMenu',items : [
+            {
+               text    : 'No area restriction'
+              ,group   : 'bboxFilter'
+              ,checked : true
+              ,handler : function(el) {
+                Ext.getCmp('restrictGeoSearchButton').setText(el.text);
+                delete map.searchBbox;
+                Ext.getCmp('searchText').onTrigger2Click();
+              }
+            }
+            ,'-'
+            ,{
+               text    : 'Map boundaries'
+              ,group   : 'bboxFilter'
+              ,checked : true
+              ,handler : function(el) {
+                Ext.getCmp('restrictGeoSearchButton').setText('Restrict to ' + el.text.toLowerCase());
+                map.searchBbox = 'mapExtent';
+                Ext.getCmp('searchText').onTrigger2Click();
+              }
+            }
+          ]}
+        }
+        ,{
+           id           : 'restrictTimeSearchButton'
+          ,text         : 'Select a temporal filter'
+          ,allowDepress : false
+          ,icon         : 'img/calendar.png'
+          ,menu         : {id : 'restrictTimeSearchMenu',items : [
+            {
+               text    : 'No temporal restriction'
+              ,group   : 'timeOptions'
+              ,checked : true
+              ,handler : function(el) {
+                delete map.searchBeginDate;
+                delete map.searchEndDate;
+                Ext.getCmp('restrictTimeSearchButton').setText(el.text);
+                Ext.getCmp('searchText').onTrigger2Click();
+              }
+            }
+            ,'-'
+            ,{
+               text    : 'Until this date...'
+              ,group   : 'timeOptions'
+              ,checked : true
+              ,handler : function(el) {
+                var dWin = new Ext.Window({
+                   title     : 'Temporal restriction option(s)'
+                  ,modal     : true
+                  ,width     : 240
+                  ,layout    : 'form'
+                  ,labelSeparator : ''
+                  ,x         : Ext.getCmp('restrictTimeSearchButton').getPosition()[0]
+                  ,y         : Ext.getCmp('restrictTimeSearchButton').getPosition()[1]
+                  ,bodyStyle : 'padding:6;background:white'
+                  ,constrainHeader : true
+                  ,items     : new Ext.form.DateField({
+                     fieldLabel : 'Until this date'
+                    ,id         : 'endDate'
+                    ,allowBlank : false
+                    ,value      : map.searchEndDate ? map.searchEndDate : new Date()
+                  })
+                  ,buttons  : [
+                     {text : 'OK',handler : function() {
+                       if (Ext.getCmp('endDate').isValid()) {
+                         Ext.getCmp('restrictTimeSearchButton').setText('Until ' + Ext.getCmp('endDate').getValue().format("mmm d, yyyy"));
+                         delete map.searchBeginDate;
+                         map.searchEndDate = Ext.getCmp('endDate').getValue();
+                         Ext.getCmp('searchText').onTrigger2Click();
+                         dWin.close();
+                       }
+                     }}
+                    ,{text : 'Cancel',handler : function() {dWin.close()}}
+                  ]
+                });
+                dWin.show();
+              }
+            }
+            ,{
+               text    : 'Between these dates...'
+              ,group   : 'timeOptions'
+              ,checked : true
+              ,handler : function(el) {
+                var dWin = new Ext.Window({
+                   title     : 'Temporal restriction option(s)'
+                  ,modal     : true
+                  ,width     : 240
+                  ,layout    : 'form'
+                  ,labelSeparator : ''
+                  ,x         : Ext.getCmp('restrictTimeSearchButton').getPosition()[0]
+                  ,y         : Ext.getCmp('restrictTimeSearchButton').getPosition()[1]
+                  ,bodyStyle : 'padding:6;background:white'
+                  ,constrainHeader : true
+                  ,items     : [
+                    new Ext.form.DateField({
+                       fieldLabel : 'Between'
+                      ,id         : 'beginDate'
+                      ,allowBlank : false
+                      ,value      : map.searchBeginDate ? map.searchBeginDate : new Date(new Date().getTime() - 365 * 3600 * 24 * 1000)
+                    })
+                    ,new Ext.form.DateField({
+                       fieldLabel : 'And'
+                      ,id         : 'endDate'
+                      ,allowBlank : false
+                      ,value      : map.searchEndDate ? map.searchEndDate : new Date()
+                    })
+                  ]
+                  ,buttons  : [
+                     {text : 'OK',handler : function() {
+                       if (Ext.getCmp('beginDate').isValid() && Ext.getCmp('endDate').isValid()) {
+                         Ext.getCmp('restrictTimeSearchButton').setText('Between ' + Ext.getCmp('beginDate').getValue().format("mmm d, yyyy") + ' & ' + Ext.getCmp('endDate').getValue().format("mmm d, yyyy"));
+                         map.searchBeginDate = Ext.getCmp('beginDate').getValue();
+                         map.searchEndDate = Ext.getCmp('endDate').getValue();
+                         Ext.getCmp('searchText').onTrigger2Click();
+                         dWin.close();
+                       }
+                     }}
+                    ,{text : 'Cancel',handler : function() {dWin.close()}}
+                  ]
+                });
+                dWin.show();
+              }
+            }
+            ,{
+               text    : 'After this date...'
+              ,group   : 'timeOptions'
+              ,checked : true
+              ,handler : function(el) {
+                var dWin = new Ext.Window({
+                   title     : 'Temporal restriction option(s)'
+                  ,modal     : true
+                  ,width     : 240
+                  ,layout    : 'form'
+                  ,labelSeparator : ''
+                  ,x         : Ext.getCmp('restrictTimeSearchButton').getPosition()[0]
+                  ,y         : Ext.getCmp('restrictTimeSearchButton').getPosition()[1]
+                  ,bodyStyle : 'padding:6;background:white'
+                  ,constrainHeader : true
+                  ,items     : new Ext.form.DateField({
+                     fieldLabel : 'After this date'
+                    ,id         : 'beginDate'
+                    ,allowBlank : false
+                    ,value      : map.searchBeginDate ? map.searchBeginDate : new Date(new Date().getTime() - 365 * 3600 * 24 * 1000)
+                  })
+                  ,buttons  : [
+                     {text : 'OK',handler : function() {
+                       if (Ext.getCmp('beginDate').isValid()) {
+                         Ext.getCmp('restrictTimeSearchButton').setText('After ' + Ext.getCmp('beginDate').getValue().format("mmm d, yyyy"));
+                         map.searchBeginDate = Ext.getCmp('beginDate').getValue();
+                         delete map.searchEndDate;
+                         Ext.getCmp('searchText').onTrigger2Click();
+                         dWin.close();
+                       }
+                     }}
+                    ,{text : 'Cancel',handler : function() {dWin.close()}}
+                  ]
+                });
+                dWin.show();
+              }
+            }
+          ]}
         }
       ]
       ,bbar            : new Ext.PagingToolbar({
@@ -281,7 +442,7 @@ function init() {
     ,listeners : {
       afterrender : function(cmp) {
         cmp.addListener('resize',function(cmp,w) {
-          Ext.getCmp('searchText').setWidth(w - Ext.getCmp('restrictToBbox').getWidth() - 2 - 20);
+          Ext.getCmp('searchText').setWidth(w - Ext.getCmp('restrictTimeSearchButton').getWidth() - Ext.getCmp('restrictGeoSearchButton').getWidth() - 100);
         });
       }
     }
@@ -427,20 +588,29 @@ function init() {
   });
 }
 
-function search(cmp,sto,searchText,start,searchBbox) {
-console.log('search');
+function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDate) {
   cmp.getEl().mask('<table class="maskText"><tr><td>Loading...&nbsp;</td><td><img src="./lib/ext-3.4.1/resources/images/default/grid/loading.gif"></td></tr></table>');
   sto.removeAll();
-  var contraints = {what : searchText};
-  if (searchBbox) {
+  var constraints = {what : searchText};
+  if (searchBbox && searchBbox == 'mapExtent') {
     var bbox = map.getExtent().transform(proj3857,proj4326).toArray();
-    contraints.where = {
+    constraints.where = {
        'west'  : Math.max(bbox[0],-180)
       ,'south' : Math.max(bbox[1],-90)
       ,'east'  : Math.min(bbox[2],180)
       ,'north' : Math.min(bbox[3],90)
     };
   }
+  if (searchBeginDate || searchEndDate) {
+    constraints.when = {};
+    if (searchBeginDate) {
+      constraints.when.from = searchBeginDate.format('yyyy-mm-dd');
+    }
+    if (searchEndDate) {
+      constraints.when.to = searchEndDate.format('yyyy-mm-dd');
+    }
+  }
+  console && console.dir(constraints);
   GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/').discover(
     function(result) {
       var data = {
@@ -450,25 +620,27 @@ console.log('search');
       var paginator = result[0];
       data.results = paginator.resultSet().size;
       var page = paginator.page();
-      while (page.hasNext()) {
-        var node = page.next();
-        var report = node.report();
-        data.rows.push({
-           id     : report.id
-          ,title  : report.description != 'none' ? report.description : report.title
-          ,when   : report.when
-          ,where  : report.where
-          ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
-          ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
-          ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
-          ,node   : node.isAccessible() ? node : false
-        });
+      if (page) {
+        while (page.hasNext()) {
+          var node = page.next();
+          var report = node.report();
+          data.rows.push({
+             id     : report.id
+            ,title  : report.description != 'none' ? report.description : report.title
+            ,when   : report.when
+            ,where  : report.where
+            ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
+            ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
+            ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
+            ,node   : node.isAccessible() ? node : false
+          });
+        }
       }
       sto.setBaseParam('start',start ? start : 1);
       sto.loadData(data);
       cmp.getEl().unmask();
     }
-    ,contraints
+    ,constraints
     ,{
        start    : start
       ,pageSize : pageSize
@@ -990,7 +1162,7 @@ function getData(reportId,lyrId) {
                     options['resolution'][o] = Ext.getCmp(o).getValue();
                   }
                 });
-                console.dir(options);
+                console && console.dir(options);
                 node.accessLink(function(resp) {
                   var idx = layersStore.findBy(function(rec) {
                     return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
