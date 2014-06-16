@@ -16,9 +16,3 @@
   top : 10px !important;
   left : 10px !important;
 }
-
-#foo .x-panel-body,.x-panel-body-noheader,.x-form {
-  border-top : none;
-  border-left : none;
-  border-right : none;
-}

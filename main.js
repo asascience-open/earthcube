@@ -31,7 +31,13 @@ function init() {
     ,proxy      : new Ext.data.MemoryProxy()
     ,listeners  : {
       beforeload : function(sto,opt) {
-        search(Ext.getCmp('searchPanel'),sto,Ext.getCmp('searchText').getValue(),opt.params ? opt.params.start : 1);
+        search(
+           Ext.getCmp('searchPanel')
+          ,sto
+          ,Ext.getCmp('searchText').getValue()
+          ,opt.params ? opt.params.start : 1
+          ,Ext.getCmp('restrictToBbox').pressed
+        );
       }
       ,load : function(sto) {
         searchHilite.removeAllFeatures();
@@ -155,38 +161,49 @@ function init() {
       ,border           : false
       ,loadMask         : true
       ,enableHdMenu     : false
-      ,tbar             : [new Ext.ux.form.SearchField({
-         emptyText       : 'Enter keywords to find data.'
-        ,id              : 'searchText'
-        ,border          : false
-        ,wrapFocusClass  : ''
-        ,disableSelection : true
-        ,onTrigger1Click  : function() {
-          if(this.hasSearch){
-            this.reset();
-            // force a reset for emptyText
-            this.setRawValue(this.emptyText);
-            this.el.addClass(this.emptyClass);
-            this.triggers[0].hide();
-            this.hasSearch = false;
-            searchStore.removeAll();
+      ,tbar             : [
+        new Ext.ux.form.SearchField({
+           emptyText       : 'Enter keywords to find data.'
+          ,id              : 'searchText'
+          ,border          : false
+          ,wrapFocusClass  : ''
+          ,disableSelection : true
+          ,onTrigger1Click  : function() {
+            if(this.hasSearch){
+              this.reset();
+              // force a reset for emptyText
+              this.setRawValue(this.emptyText);
+              this.el.addClass(this.emptyClass);
+              this.triggers[0].hide();
+              this.hasSearch = false;
+              searchStore.removeAll();
+            }
+          }
+          ,onTrigger2Click : function() {
+            var v = this.getRawValue();
+            if (v.length < 1) {
+              this.onTrigger1Click();
+              return;
+            }
+            searchStore.load();
+            this.hasSearch = true;
+            this.triggers[0].show();
+          }
+          ,listeners : {afterrender : function(cmp) {
+            cmp.setValue('temperature');
+          }}
+        })
+        ,'->'
+        ,{
+           id            : 'restrictToBbox'
+          ,text          : 'Restrict search results to map?'
+          ,enableToggle  : true
+          ,pressed       : true
+          ,toggleHandler : function(cmp) {
+            Ext.getCmp('searchText').onTrigger2Click();
           }
         }
-        ,onTrigger2Click : function() {
-          var v = this.getRawValue();
-          if (v.length < 1) {
-            this.onTrigger1Click();
-            return;
-          }
-          searchStore.load();
-          this.hasSearch = true;
-          this.triggers[0].show();
-        }
-        ,listeners : {afterrender : function(cmp) {
-          cmp.setValue('temperature');
-          cmp.onTrigger2Click();
-        }}
-      })]
+      ]
       ,bbar            : new Ext.PagingToolbar({
          pageSize    : pageSize
         ,store       : searchStore
@@ -264,7 +281,7 @@ function init() {
     ,listeners : {
       afterrender : function(cmp) {
         cmp.addListener('resize',function(cmp,w) {
-          Ext.getCmp('searchText').setWidth(w - 7);
+          Ext.getCmp('searchText').setWidth(w - Ext.getCmp('restrictToBbox').getWidth() - 2 - 20);
         });
       }
     }
@@ -410,9 +427,20 @@ function init() {
   });
 }
 
-function search(cmp,sto,searchText,start) {
+function search(cmp,sto,searchText,start,searchBbox) {
+console.log('search');
   cmp.getEl().mask('<table class="maskText"><tr><td>Loading...&nbsp;</td><td><img src="./lib/ext-3.4.1/resources/images/default/grid/loading.gif"></td></tr></table>');
   sto.removeAll();
+  var contraints = {what : searchText};
+  if (searchBbox) {
+    var bbox = map.getExtent().transform(proj3857,proj4326).toArray();
+    contraints.where = {
+       'west'  : Math.max(bbox[0],-180)
+      ,'south' : Math.max(bbox[1],-90)
+      ,'east'  : Math.min(bbox[2],180)
+      ,'north' : Math.min(bbox[3],90)
+    };
+  }
   GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/').discover(
     function(result) {
       var data = {
@@ -440,9 +468,7 @@ function search(cmp,sto,searchText,start) {
       sto.loadData(data);
       cmp.getEl().unmask();
     }
-    ,{
-      what : searchText
-    }
+    ,contraints
     ,{
        start    : start
       ,pageSize : pageSize
@@ -457,10 +483,18 @@ function initMap() {
       'default' : new OpenLayers.Style(
         OpenLayers.Util.applyDefaults({
            fillOpacity   : 0
-          ,strokeWidth   : 1
+          ,strokeWidth   : '${getStrokeWidth}'
           ,strokeColor   : '#888888'
           ,strokeOpacity : 1
         })
+        ,{
+          context : {
+            getStrokeWidth : function(f) {
+              // Thicken up border if the bbox is tiny compared to the map.
+              return (f.geometry.getArea() / map.getExtent().toGeometry().getArea()) < 0.000001 ? 10 : 1;
+            }
+          }
+        }
       )
     })}
   );
@@ -475,11 +509,13 @@ function initMap() {
           ,strokeWidth   : '${getStrokeWidth}'
           ,strokeColor   : '#0000ff'
           ,strokeOpacity : 1
+/*
           ,label         : "${title}"
           ,fontColor     : '#000000'
           ,fontSize      : '11px'
           ,fontFamily    : 'arial'
           ,fontWeight    : 'bold'
+*/
         })
         ,{
           context : {
@@ -548,6 +584,9 @@ function initMap() {
     if (idx >= 0) {
       layersStore.removeAt(idx);
     }
+  });
+  map.events.register('moveend',this,function(e) {
+    Ext.getCmp('searchText').onTrigger2Click();
   });
 }
 
