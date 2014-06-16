@@ -203,7 +203,7 @@ function init() {
           ,icon         : 'img/zoom.png'
           ,menu         : {id : 'restrictGeoSearchMenu',items : [
             {
-               text    : 'No area restriction'
+               text    : 'No geographic restriction'
               ,group   : 'bboxFilter'
               ,checked : true
               ,handler : function(el) {
