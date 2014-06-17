@@ -45,6 +45,7 @@
 						</div>
 					</div>
 					<div id="filters">
+						<div id="date-slider"></div>
 						<p><input type="checkbox" value="restrict" name="restrict" id="restrict" /> <label for="restrict">Restrict search results to map boundaries</label></p>
 					</div>
 					<div id="pagination">
@@ -102,6 +103,8 @@
 		</div>
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+		<script src="jQDateRangeSlider-min.js"></script>
 		<script>
 			function resize() {
 				$('#search-results ul, #map').height($(window).height()-170);
@@ -109,6 +112,19 @@
 			window.onresize = function(e){resize();};
 			$(document).ready(function(){
 				resize();
+				$('#date-slider').dateRangeSlider({
+					bounds: {
+						min: new Date(2012, 0, 1),
+						max: new Date(Date.now())
+					},
+					defaultValues : {
+						min: new Date(2012, 5, 1),
+						max: new Date(2014, 0, 1)
+					}
+				});
+				$('#date-slider').bind("valuesChanged", function(e, data){
+					console.log("Values just changed. min: " + data.values.min + " max: " + data.values.max);
+				});
 			});
 		</script>
 	</body>
