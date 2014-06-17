@@ -16,6 +16,8 @@ body {
 	padding-top: 80px;
 }
 
+a {outline: 0!important;}
+
 .navbar {
 	background-color: #eee; 
 	background-image: -webkit-linear-gradient(top, #fff, #eee);
@@ -42,7 +44,7 @@ ul.nav > li > a {
 	padding-top:29px;
 }
 
-ul.nav > li > a:hover {
+ul.nav > li > a:hover, ul.nav > li.active > a:hover, ul.nav > li > a:focus {
 	background-color: transparent!important;
 }
 
