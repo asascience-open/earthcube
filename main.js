@@ -642,8 +642,9 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
     }
     ,constraints
     ,{
-       start    : start
-      ,pageSize : pageSize
+       start           : start
+      ,pageSize        : pageSize
+      ,spatialRelation : 'OVERLAPS'
     }
   );
 }
