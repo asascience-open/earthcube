@@ -5,6 +5,8 @@
 		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>Earthcube</title>
+		<!-- Bootstrap -->
+		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
 		<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 		<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 		<!--[if lt IE 9]>
@@ -14,44 +16,98 @@
 		<link rel="stylesheet" href="style2.css">
 	</head>
 	<body>
-		<header>
-			<nav>
-				<a href="#"><div class="tab active"></div></a>
-				<a href="#"><div class="tab"></div></a>
-			</nav>
-		</header>
-		<section id="search-and-pagination">
-			<div id="search">
-				<input type="search" name="search" />
-				<div>
-					<a href="" title="search"><img src="img/search_button.png" alt="search" /></a>
-					<a href="" title="clear search"><img src="img/close_button.png" alt="clear search"></a>
+		<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+			<div class="container-fluid">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+					<span class="sr-only">Toggle navigation</span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					</button>
+				</div>
+				<div class="navbar-collapse collapse">
+					<ul class="nav navbar-nav">
+						<li class="active"><a href="#">Catalogue</a></li>
+						<li><a href="#">Map View</a></li>
+					</ul>
 				</div>
 			</div>
+		</div>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<div id="search-div">
+						<input type="search" name="search" id="search" autofocus="true" />
+						<div>
+							<a href="" title="search"><img src="img/search_button.png" alt="search" /></a>
+							<a href="" title="clear search"><img src="img/close_button.png" alt="clear search"></a>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-md-7" id="search-results">
+					<ul>
+						<li>
+							<div class="sub-title">SNAP Historical Monthly Temperature</div>
+							<div class="title">Monthly Average Air Temperature</div>
+							<div class="content">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div>
+							<div class="buttons">
+								<a href="#"><img src="img/download_data.png" />Download</a>
+								<a href="#"><img src="img/add_to_map.png" />Add to Map</a>
+								<img src="img/start&end_time.png" />
+								Start &amp; End Time
+								<input type="text" value="06/09/11 - 06/09/14" name="dateTime" />
+							</div>
+						</li>
+						<li>
+							<div class="sub-title">SNAP Historical Monthly Temperature</div>
+							<div class="title">Monthly Average Air Temperature</div>
+							<div class="content">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div>
+							<div class="buttons">
+								<a href="#"><img src="img/download_data.png" />Download</a>
+								<a href="#"><img src="img/add_to_map.png" />Add to Map</a>
+								<img src="img/start&end_time.png" />
+								Start &amp; End Time
+								<input type="text" value="06/09/11 - 06/09/14" name="dateTime" />
+							</div>
+						</li>
+						<li>
+							<div class="sub-title">SNAP Historical Monthly Temperature</div>
+							<div class="title">Monthly Average Air Temperature</div>
+							<div class="content">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div>
+							<div class="buttons">
+								<a href="#"><img src="img/download_data.png" />Download</a>
+								<a href="#"><img src="img/add_to_map.png" />Add to Map</a>
+								<img src="img/start&end_time.png" />
+								Start &amp; End Time
+								<input type="text" value="06/09/11 - 06/09/14" name="dateTime" />
+							</div>
+						</li>
+					</ul>
+				</div>
+				<div class="col-md-5">
+					<div id="map"></div>
+				</div>
+			</div>
+		</div>
+		<!--
 			<div id="pagination">
 				<p>1-10 of 79 results</p>
 				<a href="#" title="back"><img src="img/back_arrow_grey.png" alt="back" /></a>
 				<a href="#" title="forward"><img src="img/forward_arrow_blue.png" alt="forward" /></a>
-			</div>
-		</section>
-		<section id="results-and-map">
-			<div id="results">
-				<ul>
-					<li>
-						<div class="sub-title">SNAP Historical Monthly Temperature</div>
-						<div class="title">Monthly Average Air Temperature</div>
-						<div class="content">Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div>
-						<div class="buttons">
-							<a href="#"><img src="img/download_data.png" />Download</a>
-							<a href="#"><img src="img/add_to_map.png" />Add to Map</a>
-							<img src="img/start&end_time.png" />
-							Start &amp; End Time
-							<input type="text" value="06/09/11 - 06/09/14" name="dateTime" />
-						</div>
-					</li>
-				</ul>
-			</div>
-			<div id="map"></div>
-		</section>
+			</div>-->
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+		<script>
+			function resize() {
+				$('#search-results ul, #map').height($(window).height()-170);
+			}
+			window.onresize = function(e){resize();};
+			$(document).ready(function(){
+				resize();
+			});
+		</script>
 	</body>
 </html>
