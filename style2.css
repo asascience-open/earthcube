@@ -165,6 +165,10 @@ body > .container-fluid > .row:last-child {
 					text-align: center;
 				}
 
+#map-view-col {
+	display: none;
+}
+
 #map {
 	background: url('img/map.png') no-repeat;
 }

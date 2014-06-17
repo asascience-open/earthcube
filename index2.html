@@ -35,7 +35,7 @@
 			</div>
 		</div>
 		<div class="container-fluid">
-			<div class="row">
+			<div class="row" id="search-row">
 				<div class="col-md-12">
 					<div id="search-div">
 						<input type="search" name="search" id="search" autofocus="true" />
@@ -96,7 +96,10 @@
 						</li>
 					</ul>
 				</div>
-				<div class="col-md-4">
+				<div class="col-md-3" id="map-view-col">
+					<p>Monthly Average Air Temperature</p>
+				</div>
+				<div class="col-md-4" id="map-col">
 					<div id="map"></div>
 				</div>
 			</div>
@@ -107,7 +110,10 @@
 		<script src="jQDateRangeSlider-min.js"></script>
 		<script>
 			function resize() {
-				$('#search-results ul, #map').height($(window).height()-170);
+				var offset = 170;
+				if ($('ul.nav li:last-child').hasClass('active'))
+					offset = 105;
+				$('#search-results ul, #map').height($(window).height()-offset);
 			}
 			window.onresize = function(e){resize();};
 			$(document).ready(function(){
@@ -124,6 +130,32 @@
 				});
 				$('#date-slider').bind("valuesChanged", function(e, data){
 					console.log("Values just changed. min: " + data.values.min + " max: " + data.values.max);
+				});
+				$('ul.nav li:first-child a').on('click', function(e){
+					e.preventDefault();
+					if ($(this).hasClass('active'))
+						return false;
+					else {
+						$('#map-col').removeClass('col-md-9').addClass('col-md-4');
+						$('#search-row, #search-results').show();
+						$('#map-view-col').hide();
+						$('li.active').removeClass('active');
+						$(this).parent().addClass('active');
+						resize();
+					}
+				});
+				$('ul.nav li:last-child a').on('click', function(e){
+					e.preventDefault();
+					if ($(this).hasClass('active'))
+						return false;
+					else {
+						$('#search-row, #search-results').hide();
+						$('#map-view-col').show();
+						$('#map-col').removeClass('col-md-4').addClass('col-md-9');
+						$('li.active').removeClass('active');
+						$(this).parent().addClass('active');
+						resize();
+					}
 				});
 			});
 		</script>
