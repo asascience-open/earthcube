@@ -85,20 +85,24 @@ ul.nav li:last-child.active a {
 		margin-top: 8px;
 	}
 
-#pagination {
+#filters, #pagination {
 	float:left;
 	padding-left: 12px;
 }
 
-	#pagination p{
+	#filters p {
+		line-height: 20px!important;
+	}
+
+	#filters label {
+		font-weight: normal;
+	}
+
+	#filters p, #pagination p{
 		float: left;
 		padding-right: 10px;
 		line-height: 56px;
 		margin-bottom: 0;
-	}
-
-	#pagination div {
-		float: left;
 	}
 
 	#pagination img {
