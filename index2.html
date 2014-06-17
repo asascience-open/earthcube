@@ -125,6 +125,110 @@
 				</div><!-- /.modal-content -->
 			</div><!-- /.modal-dialog -->
 		</div><!-- /.modal -->
+		<div class="modal fade" id="download-modal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+						<h4 class="modal-title">Build download link</h4>
+					</div>
+					<div class="modal-body">
+						<form class="form-horizontal" role="form">
+							<div class="form-group">
+								<label for="presets" class="col-sm-4 control-label">Presets</label>
+								<div class="col-sm-8">
+									<select id="presets">
+										<option>temperature, EPSG:3035, GeoTIFF</option>
+										<option>temperature, EPSG:3035, jpeg</option>
+										<option>temperature, EPSG:3035, NetCDF</option>
+										<option>temperature, EPSG:3035, png</option>
+										<option>temperature, EPSG:3857, jpeg</option>
+										<option>temperature, EPSG:3857, NetCDF</option>
+										<option>temperature, EPSG:3857, png</option>
+										<option selected='true'>temperature, EPSG:4326, GeoTIFF</option>
+										<option>temperature, EPSG:4326, GML 3.1.1</option>
+										<option>temperature, EPSG:4326, jpeg</option>
+										<option>temperature, EPSG:4326, NetCDF</option>
+										<option>temperature, EPSG:4326, NetCDF trajectory</option>
+										<option>temperature, EPSG:4326, png</option>
+									</select>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="name" class="col-sm-4 control-label">Name</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="name" value="temperature" disabled="true">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="crs" class="col-sm-4 control-label">CRS</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="crs" value="EPSG:3035" disabled="true">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="format" class="col-sm-4 control-label">Format</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="format" value="GeoTIFF" disabled="true">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="min-longitude" class="col-sm-4 control-label">Min longitude</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="min-longitude" value="13.82838">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="min-latitude" class="col-sm-4 control-label">Min latitude</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="min-latitude" value="-32.7864">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="max-longitude" class="col-sm-4 control-label">Max longitude</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="max-longitude" value="13.83209">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="max-latitude" class="col-sm-4 control-label">Max latitude</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="max-latitude" value="-32.7723">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="longitude-res" class="col-sm-4 control-label">Longitude res.</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="longitude-res" value="5.5e-8">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="latitude-res" class="col-sm-4 control-label">Latitude res.</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="latitude-res" value="0">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="time-from" class="col-sm-4 control-label">Time from</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="time-from" value="2013-02-02T22:41:04Z">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="time-to" class="col-sm-4 control-label">Time to</label>
+								<div class="col-sm-8">
+									<input type="text" class="form-control" id="time-to" value="2013-02-03T06:24:00Z">
+								</div>
+							</div>
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+						<button type="button" class="btn btn-primary">OK</button>
+					</div>
+				</div><!-- /.modal-content -->
+			</div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
 		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
@@ -178,13 +282,15 @@
 						resize();
 					}
 				});
-				$('#add-to-map-modal').modal({
+				$('#add-to-map-modal, #download-modal').modal({
 					show: false
 				});
 				$('li .buttons a').on('click', function(e){
 					e.preventDefault();
 					if ($(this).text() == "Add to Map")
-						$('#add-to-map-modal').modal('show')
+						$('#add-to-map-modal').modal('show');
+					else if ($(this).text() == "Download")
+						$('#download-modal').modal('show');
 				});
 			});
 		</script>
