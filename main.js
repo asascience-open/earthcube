@@ -10,6 +10,10 @@ var searchShadow;
 var searchHilite;
 
 function init() {
+  $('#add-to-map-modal').modal({
+    show: false
+  });
+
   searchStore = new Ext.data.Store({
     reader     : new Ext.data.JsonReader({
        idProperty    : 'id'
@@ -111,19 +115,10 @@ function init() {
           }
 
           var addToMap = '';
-          var wms = [];
-          _.each(rec.get('wms'),function(o) {
-            var params = [rec.get('id'),o];
-            wms.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
-            addToMap = '<a href="javascript:addWms(\'' + params.join("','") + '\')" title="Add to map"><img src="img/add_to_map.png" title="Add to map">Add to Map</a>';
-          });
-
-          var vec = [];
-          _.each(rec.get('vec'),function(o) {
-            var params = [rec.get('id'),o];
-            vec.push('<a title="Add layer to map" class="link" href="javascript:addVec(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
-            addToMap = '<a href="javascript:addVec(\'' + params.join("','") + '\')" title="Add to map"><img src="img/add_to_map.png" title="Add to map">Add to Map</a>';
-          });
+          if (rec.get('wms').concat(rec.get('vec')).length > 0) {
+            var params = [rec.get('id')];
+            addToMap = '<a href="javascript:addToMapModal(\'' + params.join("','") + '\')" title="Add to map"><img src="img/add_to_map.png" title="Add to map">Add to Map</a>';
+          }
 
           var timeSpan = '';
           if (when.length > 0) {
@@ -902,6 +897,25 @@ function addData(reportId,lyrId) {
   }
 }
 
+function addToMapModal(reportId) {
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    var rec = searchStore.getAt(searchIdx);
+    var wms = [];
+    _.each(rec.get('wms'),function(o) {
+      var params = [rec.get('id'),o];
+      wms.push('<a title="Add layer to map" href="javascript:addWms(\'' + params.join("','") + '\')">' + o + '</a>');
+    });
+    var vec = [];
+    _.each(rec.get('vec'),function(o) {
+      var params = [rec.get('id'),o];
+      vec.push('<a title="Add layer to map" href="javascript:addVec(\'' + params.join("','") + '\')">' + o + '</a>');
+    });
+    $('#add-to-map-modal ul').html('<li>' + wms.concat(vec).join('</li><li>') + '</li>');
+    $('#add-to-map-modal').modal('show');
+  }
+}
+
 function addVec(reportId,lyrName) {
   searchShadow.setVisibility(false);
   var searchIdx = searchStore.findExact('id',reportId);
@@ -985,7 +999,7 @@ function addWms(reportId,lyrName) {
       return rec.get('reportId') == reportId && rec.get('name') == lyrName;
     });
     if (lyrIdx >= 0) {
-      Ext.Msg.alert('Error',"We're sorry, but you have already added this layer to your map.");
+      $('#add-to-map-modal ul').html('<li>' + "We're sorry, but you have already added this layer to your map." + '</li>');
       return false;
     }
     else {
@@ -1031,6 +1045,7 @@ function addWms(reportId,lyrName) {
       });
 
       map.addLayer(lyr);
+      $('#add-to-map-modal').modal('hide');
     }
   }
 }

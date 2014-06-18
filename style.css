@@ -80,3 +80,22 @@
   margin-right : 10px;
   cursor       : auto;
 }
+
+.modal {
+  z-index    : 10000;
+  overflow-y : hidden;
+}
+
+#add-to-map-modal .modal-dialog {
+  width : 200px;
+}
+
+#add-to-map-modal .modal-content {
+  text-align : center;
+}
+
+#add-to-map-modal .modal-content ul {
+  list-style-type : none;
+  padding-left    : 0;
+}
+
