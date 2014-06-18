@@ -130,13 +130,22 @@ body > .container-fluid > .row:last-child {
 
 		#search-results ul li {
 			padding: 21px 31px;
-			background-color: #fff; 
-			background-image: -webkit-linear-gradient(top, #fff, #eee);
-			background-image:    -moz-linear-gradient(top, #fff, #eee);
-			background-image:     -ms-linear-gradient(top, #fff, #eee);
-			background-image:      -o-linear-gradient(top, #fff, #eee);
-			background-image:         linear-gradient(to bottom, #fff, #eee);
+			background-color: #ededed;
+			background-image: -webkit-linear-gradient(top, #fff, #ededed);
+			background-image:    -moz-linear-gradient(top, #fff, #ededed);
+			background-image:     -ms-linear-gradient(top, #fff, #ededed);
+			background-image:      -o-linear-gradient(top, #fff, #ededed);
+			background-image:         linear-gradient(to bottom, #fff, #ededed);
 		}
+
+			#search-results ul li.active {
+				background-color: #d0dce2;
+				background-image: -webkit-linear-gradient(top, #e6f2f8, #d0dce2);
+				background-image:    -moz-linear-gradient(top, #e6f2f8, #d0dce2);
+				background-image:     -ms-linear-gradient(top, #e6f2f8, #d0dce2);
+				background-image:      -o-linear-gradient(top, #e6f2f8, #d0dce2);
+				background-image:         linear-gradient(to bottom, #e6f2f8, #d0dce2);
+			}
 
 			#search-results ul li .sub-title {
 				padding-bottom: 10px;
