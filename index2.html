@@ -7,6 +7,7 @@
 		<title>Earthcube</title>
 		<!-- Bootstrap -->
 		<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="bootstrap-select.css">
 		<!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 		<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 		<!--[if lt IE 9]>
@@ -159,7 +160,7 @@
 							<div class="form-group">
 								<label for="presets" class="col-sm-4 control-label">Presets</label>
 								<div class="col-sm-8">
-									<select id="presets">
+									<select id="presets" class="selectpicker">
 										<option>temperature, EPSG:3035, GeoTIFF</option>
 										<option>temperature, EPSG:3035, jpeg</option>
 										<option>temperature, EPSG:3035, NetCDF</option>
@@ -255,6 +256,7 @@
 		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
 		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 		<script src="jQDateRangeSlider-min.js"></script>
+		<script src="bootstrap-select.js"></script>
 		<script>
 			function resize() {
 				var offset = 170;
@@ -325,6 +327,7 @@
 							$(this).prop('checked', true);
 						});
 				});
+				$('.selectpicker').selectpicker();
 			});
 		</script>
 	</body>
