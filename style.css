@@ -66,6 +66,7 @@
   text-align     : center;
   vertical-align : top;
   margin-top     : 2px;
+  float          : right;
 }
 
 #searchPanel .buttons a {
@@ -74,6 +75,10 @@
   color           : #8B8B8B;
   padding-right   : 10px;
   cursor          : auto;
+}
+
+#searchPanel .buttons a:last-child {
+  float : right;
 }
 
 #searchPanel .buttons a img {
