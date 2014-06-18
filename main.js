@@ -18,6 +18,7 @@ function init() {
       ,fields        : [
          {name : 'id'}
         ,{name : 'title'}
+        ,{name : 'descr'}
         ,{name : 'when'}
         ,{name : 'where'}
         ,{name : 'online'}
@@ -57,10 +58,15 @@ function init() {
      id              : 'searchPanel'
     ,layout          : 'fit'
     ,region          : 'center'
+    ,minWidth        : 675
     ,items           : new Ext.grid.GridPanel({
        disableSelection : true
       ,store            : searchStore
       ,hideHeaders      : true
+      ,cls              : 'searchResults'
+      ,viewConfig       : {
+        getRowClass : function(rec,idx) {return 'searchRow'}
+      }
       ,columns          : [
 /*
         new Ext.grid.RowNumberer({
@@ -98,10 +104,44 @@ function init() {
             }
           });
 
-          return title + '<br>'
-            + '<p>' + when.join('<br>') + '</p>';
+          var download = '';
+          if (rec.get('node')) {
+            var params = [rec.get('id'),Ext.id()];
+            download = '<a href="javascript:addData(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
+          }
+
+          var addToMap = '';
+          var wms = [];
+          _.each(rec.get('wms'),function(o) {
+            var params = [rec.get('id'),o];
+            wms.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
+            addToMap = '<a href="javascript:addWms(\'' + params.join("','") + '\')" title="Add to map"><img src="img/add_to_map.png" title="Add to map">Add to Map</a>';
+          });
+
+          var vec = [];
+          _.each(rec.get('vec'),function(o) {
+            var params = [rec.get('id'),o];
+            vec.push('<a title="Add layer to map" class="link" href="javascript:addVec(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
+            addToMap = '<a href="javascript:addVec(\'' + params.join("','") + '\')" title="Add to map"><img src="img/add_to_map.png" title="Add to map">Add to Map</a>';
+          });
+
+          var timeSpan = '';
+          if (when.length > 0) {
+            timeSpan = '<a><img src="img/time.png">Time range</a>' + '<input type="text" value="' + when[0] + '" name="dateTime" disabled="true">';
+          }
+
+          return '<div class="searchRowText">'
+              + '<div class="title">' + ellipse(title,60) + '</div>' 
+              + '<div class="content">' + rec.get('descr') + '</div>'
+              + '<div class="buttons">'
+                + download
+                + addToMap
+                + timeSpan
+              + '</div>'
+            + '</div>';
  
         }}
+/*
         ,{renderer : function(val,p,rec) {
           var val = rec.get('wms');
           var wms = [];
@@ -133,6 +173,7 @@ function init() {
             return '<a class="link" title="Access data" href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Access data" width=16 height=16 src="img/data_chooser.png">' + '<br>Access<br>data</a>';
           }
         }}
+*/
 /*
         ,{dataIndex : 'online',header : 'Protocol',renderer : function(val,p,rec) {
           var rows = [];
@@ -610,7 +651,6 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
       constraints.when.to = searchEndDate.format('yyyy-mm-dd');
     }
   }
-  console && console.dir(constraints);
   GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/').discover(
     function(result) {
       var data = {
@@ -626,7 +666,8 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
           var report = node.report();
           data.rows.push({
              id     : report.id
-            ,title  : report.description != 'none' ? report.description : report.title
+            ,title  : report.title
+            ,descr  : report.description != 'none' ? report.description : ''
             ,when   : report.when
             ,where  : report.where
             ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
@@ -797,7 +838,7 @@ function makeFeatures(rec) {
          type       : 'Feature'
         ,geometry   : g
         ,properties : {
-          title : wordwrap((rec.get('title') ? rec.get('title').substr(0,100) + (rec.get('title').length > 100 ? '...' : '') : ''),20,"\n")
+          title : wordwrap(rec.get('title') ? ellipse(rec.get('title'),40) : '',20,"\n")
         }
       }]
     });
@@ -955,7 +996,7 @@ function addWms(reportId,lyrName) {
       }
       lyr.attributes.reportId    = reportId;
       lyr.attributes.lyrId       = lyr.id;
-      lyr.attributes.reportTitle = rec.get('title');;
+      lyr.attributes.reportTitle = rec.get('title');
       lyr.attributes.where       = rec.get('where');
 
       lyr.events.register('loadstart',this,function(e) {
@@ -1163,7 +1204,6 @@ function getData(reportId,lyrId) {
                     options['resolution'][o] = Ext.getCmp(o).getValue();
                   }
                 });
-                console && console.dir(options);
                 node.accessLink(function(resp) {
                   var idx = layersStore.findBy(function(rec) {
                     return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
@@ -1226,4 +1266,8 @@ function wordwrap(str,width,brk,cut) {
   var regex = '.{1,' +width+ '}(\\s|$)' + (cut ? '|.{' +width+ '}|.+$' : '|\\S+?(\\s|$)');
  
   return str.match( RegExp(regex, 'g') ).join( brk );
+}
+
+function ellipse(str,length) {
+  return str.substr(0,length) + (str.length > length ? '...' : '');
 }
