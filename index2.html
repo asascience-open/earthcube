@@ -97,7 +97,29 @@
 					</ul>
 				</div>
 				<div class="col-md-3" id="map-view-col">
-					<p>Monthly Average Air Temperature</p>
+					<h3>Monthly Average Air Temperature</h3>
+					<div id="show-hide-assets">
+						<a href="#"><img src="img/red_x.png" alt="Turn all assets off" />Turn all assets off</a>
+						<a href="#"><img src="img/green_check.png" alt="Turn all assets on" />Turn all assets on</a>
+					</div>
+					<div id="asset-list">
+						<ul>
+							<li>
+								<div class="checkbox">
+									<label><input type="checkbox"> ROMS ESPRESSO currents</label>
+									<a href="#"><img src="img/view_data.png" alt="view data" title="view data" /></a>
+									<a href="#"><img src="img/download_data.png" alt="download data" title="download data" /></a>
+								</div>
+							</li>
+							<li>
+								<div class="checkbox">
+									<label><input type="checkbox"> HYCOM currents</label>
+									<a href="#"><img src="img/view_data.png" alt="view data" title="view data" /></a>
+									<a href="#"><img src="img/download_data.png" alt="download data" title="download data" /></a>
+								</div>
+							</li>
+						</ul>
+					</div>
 				</div>
 				<div class="col-md-4" id="map-col">
 					<div id="map"></div>
@@ -291,6 +313,17 @@
 						$('#add-to-map-modal').modal('show');
 					else if ($(this).text() == "Download")
 						$('#download-modal').modal('show');
+				});
+				$('#show-hide-assets a').on('click', function(e){
+					e.preventDefault();
+					if ($(this).text() == "Turn all assets off")
+						$('#asset-list input[type="checkbox"]').each(function(i){
+							$(this).prop('checked', false);
+						});
+					else
+						$('#asset-list input[type="checkbox"]').each(function(i){
+							$(this).prop('checked', true);
+						});
 				});
 			});
 		</script>
