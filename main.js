@@ -123,7 +123,7 @@ function init() {
 
           var timeSpan = '';
           if (when.length > 0) {
-            timeSpan = '<a><img src="img/time.png">Time range</a>' + '<input type="text" value="' + when[0] + '" name="dateTime" disabled="true">';
+            timeSpan = '<input type="text" value="' + when[0] + '" name="dateTime" disabled="true">' + '<a><img src="img/time.png">Time range</a>';
           }
 
           return '<div class="searchRowText">'
