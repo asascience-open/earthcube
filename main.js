@@ -19,16 +19,10 @@ window.onresize = function(e){
 };
 
 function init() {
-<<<<<<< HEAD
-  $('#add-to-map-modal').modal({show: false});
-  $('#download-modal').modal({show: false});
-  $('#download-modal .btn-primary').on('click',function() {createDownloadLink()});
-=======
   $('#add-to-map-modal, #download-modal, #link-modal').modal({show: false});
   $('#download-modal .btn-primary').on('click',function() {
     createDownloadLink();
   });
->>>>>>> ae03558c390a0ee45653da3d7971b1ef28d11c6f
   $('#use-map-boundaries').on('click',function() {
     var bbox = map.getExtent().transform(proj3857,proj4326).toArray();
     $('#west').val(Math.max(bbox[0],-180));
@@ -56,6 +50,20 @@ function init() {
   });
   $('a[title="Forward"]').on('click',function() {
     Ext.getCmp('searchResultsPagingToolbar').moveNext();
+  });
+
+  $('#date-slider').dateRangeSlider({
+    bounds : {
+       min : new Date(2014,0,1)
+      ,max : new Date(Date.now())
+    }
+    ,defaultValues : {
+       min : new Date(2014,0,1)
+      ,max : new Date(Date.now())
+    }
+  });
+  $('#date-slider').bind('valuesChanged',function(e,data){
+    searchStore.load();
   });
 
   searchStore = new Ext.data.Store({
@@ -87,8 +95,8 @@ function init() {
           ,$('#search').val()
           ,opt.params ? opt.params.start : 1
           ,false
-          ,false
-          ,false
+          ,$('#date-slider').dateRangeSlider('min')
+          ,$('#date-slider').dateRangeSlider('max')
         );
       }
     }
