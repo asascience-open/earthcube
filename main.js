@@ -16,6 +16,13 @@ function init() {
   $('#download-modal .btn-primary').on('click',function() {
     createDownloadLink();
   });
+  $('#use-map-boundaries').on('click',function() {
+    var bbox = map.getExtent().transform(proj3857,proj4326).toArray();
+    $('#west').val(Math.max(bbox[0],-180));
+    $('#south').val(Math.max(bbox[1],-90));
+    $('#east').val(Math.min(bbox[2],180));
+    $('#north').val(Math.min(bbox[3],90));
+  });
   $('.selectpicker').selectpicker();
 
   searchStore = new Ext.data.Store({
@@ -113,7 +120,7 @@ function init() {
           });
 
           var download = '';
-          if (rec.get('node')) {
+          if (rec.get('node') && rec.get('node').isAccessible()) {
             var params = [rec.get('id')];
             download = '<a href="javascript:showDownloadModal(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
           }
@@ -126,7 +133,7 @@ function init() {
 
           var timeSpan = '';
           if (when.length > 0) {
-            timeSpan = '<input type="text" value="' + when[0] + '" name="dateTime" disabled="true">' + '<a><img src="img/time.png">Time range</a>';
+            timeSpan = '<input type="text" value="' + when[0] + '" name="dateTime" disabled="true">' + '<a><img src="img/time.png">Time Range</a>';
           }
 
           return '<div class="searchRowText">'
@@ -932,6 +939,11 @@ function showDownloadModal(reportId) {
       $('#rasterFormat').html(
         '<option>' + _.uniq(_.sortBy(_.pluck(dataAccess,'rasterFormat'),function(o){return o.toLowerCase()}),true).join('</option><option>') + '</option>'
       );
+
+      if (dataAccess.length == 0) {
+        Ext.Msg.alert('Download error','Go away!');
+        return;
+      }
 
       // Try to find the first combo for 4326 that will work and set the defaults.
       var rec = _.find(dataAccess,function(o){return /epsg:4326/i.test(o.crs)});
