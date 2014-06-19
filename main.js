@@ -976,6 +976,15 @@ function syncDownloadOptions() {
   _.each(['lonResolution','latResolution'],function(o) {
     $('#' + o).prop('disabled',!rec.resampling);
   });
+  _.each(['west','south','east','north'],function(o) {
+    $('#' + o).val(rec.accessOptions.spatialSubset ? rec.accessOptions.spatialSubset[o] : '');
+  });
+  _.each(['from','to'],function(o) {
+    $('#' + o).val(rec.accessOptions.temporalSubset ? rec.accessOptions.temporalSubset[o] : '');
+  });
+  _.each(['lonResolution','latResolution'],function(o) {
+    $('#' + o).val(rec.accessOptions.resolution ? rec.accessOptions.resolution[o] : '');
+  });
 }
 
 function createDownloadLink() {
@@ -1029,8 +1038,6 @@ function createDownloadLink() {
     }
   });
  
-  console.dir(options);
-
   var idx = searchStore.findExact('id',$('#download-modal').data('reportId'));
   if (idx >= 0) {
     searchStore.getAt(idx).get('node').accessLink(function(resp) {
