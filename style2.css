@@ -210,6 +210,11 @@ body > .container-fluid > .row:last-child {
 
 #download-modal .modal-footer {margin-top:0;}
 
+#use-map-boundaries {
+	padding-top	: 0;
+	padding-bottom	: 0;
+}
+
 #show-hide-assets, #asset-list {
 	border: 1px solid #edece8;
 	padding: 5px;
