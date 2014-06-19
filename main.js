@@ -1,21 +1,27 @@
 var pageSize = 20;
 var searchStore;
-var layersStore;
 var dataAccess;
 
-var map;
-var proj3857 = new OpenLayers.Projection("EPSG:3857");
-var proj4326 = new OpenLayers.Projection("EPSG:4326");
+function resize() {
+  var offset = 170;
+  if ($('ul.nav li:last-child').hasClass('active')) {
+    offset = 105;
+  }
+  $('#search-results, #map').height($(window).height() - offset);
+  var cmp = Ext.getCmp('searchPanel');
+  if (cmp && cmp.rendered) {
+    cmp.setSize($('#search-results').width(),$('#search-results').height());
+  }
+}
 
-var searchShadow;
-var searchHilite;
+window.onresize = function(e){
+  resize();
+};
 
 function init() {
   $('#add-to-map-modal').modal({show: false});
   $('#download-modal').modal({show: false});
-  $('#download-modal .btn-primary').on('click',function() {
-    createDownloadLink();
-  });
+  $('#download-modal .btn-primary').on('click',function() {createDownloadLink()});
   $('#use-map-boundaries').on('click',function() {
     var bbox = map.getExtent().transform(proj3857,proj4326).toArray();
     $('#west').val(Math.max(bbox[0],-180));
@@ -24,6 +30,26 @@ function init() {
     $('#north').val(Math.min(bbox[3],90));
   });
   $('.selectpicker').selectpicker();
+
+  $('#search').val('temperature');
+  $('#search').keypress(function(e) {
+    if (e.keyCode == 13) {
+      searchStore.load();
+    }
+  });
+  $('a[title="Search"').on('click',function() {
+    searchStore.load();
+  });
+  $('a[title="Clear search"').on('click',function() {
+    $('#search').val('');
+    $('#search').focus();
+  });
+  $('a[title="Back"]').on('click',function() {
+    Ext.getCmp('searchResultsPagingToolbar').movePrevious();
+  });
+  $('a[title="Forward"]').on('click',function() {
+    Ext.getCmp('searchResultsPagingToolbar').moveNext();
+  });
 
   searchStore = new Ext.data.Store({
     reader     : new Ext.data.JsonReader({
@@ -45,35 +71,29 @@ function init() {
     ,remoteSort : true
     ,baseParams : {start : 1}
     ,proxy      : new Ext.data.MemoryProxy()
+    ,autoLoad   : true
     ,listeners  : {
       beforeload : function(sto,opt) {
         search(
            Ext.getCmp('searchPanel')
           ,sto
-          ,Ext.getCmp('searchText').getValue()
+          ,$('#search').val()
           ,opt.params ? opt.params.start : 1
-          ,map.searchBbox
-          ,map.searchBeginDate
-          ,map.searchEndDate
+          ,false
+          ,false
+          ,false
         );
-      }
-      ,load : function(sto) {
-        searchHilite.removeAllFeatures();
-        syncMapWithResults(sto,searchShadow); 
-        searchShadow.setVisibility(true);
-      }
-      ,clear : function(sto) {
-        searchHilite.removeAllFeatures();
-        syncMapWithResults(sto,searchShadow);
       }
     }
   });
 
-  var searchPanel = {
+  new Ext.Panel({
      id              : 'searchPanel'
+    ,renderTo        : 'search-results'
     ,layout          : 'fit'
+    ,border          : false
     ,region          : 'center'
-    ,minWidth        : 675
+    ,listeners       : {afterrender : function(){resize()}}
     ,items           : new Ext.grid.GridPanel({
        disableSelection : true
       ,store            : searchStore
@@ -83,16 +103,6 @@ function init() {
         getRowClass : function(rec,idx) {return 'searchRow'}
       }
       ,columns          : [
-/*
-        new Ext.grid.RowNumberer({
-          renderer : function(val,p,record,rowIndex) {
-            if (this.rowspan) {
-              p.cellAttr = 'rowspan="'+this.rowspan+'"';
-            }
-            return rowIndex + 1 + record.store.baseParams.start - 1;
-          }
-        })
-*/
         {id : 'title',dataIndex : 'title',header : 'Description',renderer : function(val,p,rec) {
           var title = val;
 
@@ -147,273 +157,14 @@ function init() {
             + '</div>';
  
         }}
-/*
-        ,{renderer : function(val,p,rec) {
-          var val = rec.get('wms');
-          var wms = [];
-          _.each(val,function(o) {
-            var params = [rec.get('id'),o];
-            wms.push('<a title="Add layer to map" class="link" href="javascript:addWms(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
-          });
-
-          val = rec.get('vec');
-          var vec = [];
-          _.each(val,function(o) {
-            var params = [rec.get('id'),o];
-            vec.push('<a title="Add layer to map" class="link" href="javascript:addVec(\'' + params.join("','") + '\')">' + '<img width=8 height=8 title="Add layer to map" class="link" src="img/plus.png">&nbsp;' + o + '</a>');
-          });
-
-          return wms.concat(vec).join('<br>');
-        }}
-        ,{align : 'center',width : 60,id : 'where',dataIndex : 'where',renderer : function(val,p,rec) {
-          var bounds = new OpenLayers.Bounds();
-          _.each(val,function(o) {
-            bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
-          });
-          bounds.transform(proj4326,proj3857);
-          return '<a class="link" title="Zoom to coverage area" href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '<br>Zoom<br>map</br>';
-        }}
-        ,{align : 'center',width : 60,renderer : function(val,p,rec) {
-          if (rec.get('node')) {
-            var params = [rec.get('id'),Ext.id()];
-            return '<a class="link" title="Access data" href="javascript:addData(\'' + params.join("','") + '\')">' + '<img class="link" title="Access data" width=16 height=16 src="img/data_chooser.png">' + '<br>Access<br>data</a>';
-          }
-        }}
-*/
-/*
-        ,{dataIndex : 'online',header : 'Protocol',renderer : function(val,p,rec) {
-          var rows = [];
-          _.each(val,function(o) {
-            rows.push(o.protocol);
-          });
-          return rows.join('<br>');
-        }}
-*/
-/*
-        ,{dataIndex : 'online',header : 'Name',renderer : function(val,p,rec) {
-          var rows = [];
-          _.each(val,function(o) {
-            rows.push(o.name);
-          });
-          return rows.join('<br>');
-        }}
-        ,{dataIndex : 'online',header : 'URL',renderer : function(val,p,rec) {
-          var rows = [];
-          _.each(val,function(o) {
-            rows.push('<a target=_blank href="' + o.url + '">link</a>');
-          });
-          return rows.join('<br>');
-        }}
-*/
       ]
       ,autoExpandColumn : 'title'
       ,border           : false
       ,loadMask         : true
       ,enableHdMenu     : false
-      ,tbar             : [
-        new Ext.ux.form.SearchField({
-           emptyText       : 'Enter keywords to find data.'
-          ,id              : 'searchText'
-          ,border          : false
-          ,wrapFocusClass  : ''
-          ,disableSelection : true
-          ,onTrigger1Click  : function() {
-            if(this.hasSearch){
-              this.reset();
-              // force a reset for emptyText
-              this.setRawValue(this.emptyText);
-              this.el.addClass(this.emptyClass);
-              this.triggers[0].hide();
-              this.hasSearch = false;
-              searchStore.removeAll();
-            }
-          }
-          ,onTrigger2Click : function() {
-            var v = this.getRawValue();
-            if (v.length < 1) {
-              this.onTrigger1Click();
-              return;
-            }
-            searchStore.load();
-            this.hasSearch = true;
-            this.triggers[0].show();
-          }
-          ,listeners : {afterrender : function(cmp) {
-            cmp.setValue('temperature');
-          }}
-        })
-        ,'->'
-        ,{
-           id           : 'restrictGeoSearchButton'
-          ,text         : 'Select a geographic filter'
-          ,allowDepress : false
-          ,icon         : 'img/zoom.png'
-          ,menu         : {id : 'restrictGeoSearchMenu',items : [
-            {
-               text    : 'No geographic restriction'
-              ,group   : 'bboxFilter'
-              ,checked : true
-              ,handler : function(el) {
-                Ext.getCmp('restrictGeoSearchButton').setText(el.text);
-                delete map.searchBbox;
-                Ext.getCmp('searchText').onTrigger2Click();
-              }
-            }
-            ,'-'
-            ,{
-               text    : 'Map boundaries'
-              ,group   : 'bboxFilter'
-              ,checked : true
-              ,handler : function(el) {
-                Ext.getCmp('restrictGeoSearchButton').setText('Restrict to ' + el.text.toLowerCase());
-                map.searchBbox = 'mapExtent';
-                Ext.getCmp('searchText').onTrigger2Click();
-              }
-            }
-          ]}
-        }
-        ,{
-           id           : 'restrictTimeSearchButton'
-          ,text         : 'Select a temporal filter'
-          ,allowDepress : false
-          ,icon         : 'img/calendar.png'
-          ,menu         : {id : 'restrictTimeSearchMenu',items : [
-            {
-               text    : 'No temporal restriction'
-              ,group   : 'timeOptions'
-              ,checked : true
-              ,handler : function(el) {
-                delete map.searchBeginDate;
-                delete map.searchEndDate;
-                Ext.getCmp('restrictTimeSearchButton').setText(el.text);
-                Ext.getCmp('searchText').onTrigger2Click();
-              }
-            }
-            ,'-'
-            ,{
-               text    : 'Until this date...'
-              ,group   : 'timeOptions'
-              ,checked : true
-              ,handler : function(el) {
-                var dWin = new Ext.Window({
-                   title     : 'Temporal restriction option(s)'
-                  ,modal     : true
-                  ,width     : 240
-                  ,layout    : 'form'
-                  ,labelSeparator : ''
-                  ,x         : Ext.getCmp('restrictTimeSearchButton').getPosition()[0]
-                  ,y         : Ext.getCmp('restrictTimeSearchButton').getPosition()[1]
-                  ,bodyStyle : 'padding:6;background:white'
-                  ,constrainHeader : true
-                  ,items     : new Ext.form.DateField({
-                     fieldLabel : 'Until this date'
-                    ,id         : 'endDate'
-                    ,allowBlank : false
-                    ,value      : map.searchEndDate ? map.searchEndDate : new Date()
-                  })
-                  ,buttons  : [
-                     {text : 'OK',handler : function() {
-                       if (Ext.getCmp('endDate').isValid()) {
-                         Ext.getCmp('restrictTimeSearchButton').setText('Until ' + Ext.getCmp('endDate').getValue().format("mmm d, yyyy"));
-                         delete map.searchBeginDate;
-                         map.searchEndDate = Ext.getCmp('endDate').getValue();
-                         Ext.getCmp('searchText').onTrigger2Click();
-                         dWin.close();
-                       }
-                     }}
-                    ,{text : 'Cancel',handler : function() {dWin.close()}}
-                  ]
-                });
-                dWin.show();
-              }
-            }
-            ,{
-               text    : 'Between these dates...'
-              ,group   : 'timeOptions'
-              ,checked : true
-              ,handler : function(el) {
-                var dWin = new Ext.Window({
-                   title     : 'Temporal restriction option(s)'
-                  ,modal     : true
-                  ,width     : 240
-                  ,layout    : 'form'
-                  ,labelSeparator : ''
-                  ,x         : Ext.getCmp('restrictTimeSearchButton').getPosition()[0]
-                  ,y         : Ext.getCmp('restrictTimeSearchButton').getPosition()[1]
-                  ,bodyStyle : 'padding:6;background:white'
-                  ,constrainHeader : true
-                  ,items     : [
-                    new Ext.form.DateField({
-                       fieldLabel : 'Between'
-                      ,id         : 'beginDate'
-                      ,allowBlank : false
-                      ,value      : map.searchBeginDate ? map.searchBeginDate : new Date(new Date().getTime() - 365 * 3600 * 24 * 1000)
-                    })
-                    ,new Ext.form.DateField({
-                       fieldLabel : 'And'
-                      ,id         : 'endDate'
-                      ,allowBlank : false
-                      ,value      : map.searchEndDate ? map.searchEndDate : new Date()
-                    })
-                  ]
-                  ,buttons  : [
-                     {text : 'OK',handler : function() {
-                       if (Ext.getCmp('beginDate').isValid() && Ext.getCmp('endDate').isValid()) {
-                         Ext.getCmp('restrictTimeSearchButton').setText('Between ' + Ext.getCmp('beginDate').getValue().format("mmm d, yyyy") + ' & ' + Ext.getCmp('endDate').getValue().format("mmm d, yyyy"));
-                         map.searchBeginDate = Ext.getCmp('beginDate').getValue();
-                         map.searchEndDate = Ext.getCmp('endDate').getValue();
-                         Ext.getCmp('searchText').onTrigger2Click();
-                         dWin.close();
-                       }
-                     }}
-                    ,{text : 'Cancel',handler : function() {dWin.close()}}
-                  ]
-                });
-                dWin.show();
-              }
-            }
-            ,{
-               text    : 'After this date...'
-              ,group   : 'timeOptions'
-              ,checked : true
-              ,handler : function(el) {
-                var dWin = new Ext.Window({
-                   title     : 'Temporal restriction option(s)'
-                  ,modal     : true
-                  ,width     : 240
-                  ,layout    : 'form'
-                  ,labelSeparator : ''
-                  ,x         : Ext.getCmp('restrictTimeSearchButton').getPosition()[0]
-                  ,y         : Ext.getCmp('restrictTimeSearchButton').getPosition()[1]
-                  ,bodyStyle : 'padding:6;background:white'
-                  ,constrainHeader : true
-                  ,items     : new Ext.form.DateField({
-                     fieldLabel : 'After this date'
-                    ,id         : 'beginDate'
-                    ,allowBlank : false
-                    ,value      : map.searchBeginDate ? map.searchBeginDate : new Date(new Date().getTime() - 365 * 3600 * 24 * 1000)
-                  })
-                  ,buttons  : [
-                     {text : 'OK',handler : function() {
-                       if (Ext.getCmp('beginDate').isValid()) {
-                         Ext.getCmp('restrictTimeSearchButton').setText('After ' + Ext.getCmp('beginDate').getValue().format("mmm d, yyyy"));
-                         map.searchBeginDate = Ext.getCmp('beginDate').getValue();
-                         delete map.searchEndDate;
-                         Ext.getCmp('searchText').onTrigger2Click();
-                         dWin.close();
-                       }
-                     }}
-                    ,{text : 'Cancel',handler : function() {dWin.close()}}
-                  ]
-                });
-                dWin.show();
-              }
-            }
-          ]}
-        }
-      ]
       ,bbar            : new Ext.PagingToolbar({
          pageSize    : pageSize
+        ,hidden      : true
         ,store       : searchStore
         ,id          : 'searchResultsPagingToolbar'
         ,displayInfo : true
@@ -438,6 +189,8 @@ function init() {
           this.prev.setDisabled(ap == 1);
           this.next.setDisabled(ap == ps);
           this.last.setDisabled(ap == ps);
+          $('a[title="Back"] img').attr('src','img/back_arrow_' + (ap == 1 ? 'grey' : 'blue') + '.png');
+          $('a[title="Forward"] img').attr('src','img/forward_arrow_' + (ap == ps ? 'grey' : 'blue') + '.png');
           this.refresh.enable();
           this.updateInfo();
           this.fireEvent('change', this, d);
@@ -452,6 +205,7 @@ function init() {
                 this.cursor, this.cursor+count - 1, this.store.getTotalCount()
               );
             this.displayItem.setText(msg);
+            $('#pagination p').html(msg);
           }
         }
         ,getPageData : function(){
@@ -463,175 +217,7 @@ function init() {
           };
         }
       })
-      ,listeners : {
-        mouseover : function(e,t) {
-          var row = this.getView().findRowIndex(t);
-          if (_.isNumber(row)) {
-            searchShadow.setVisibility(true);
-            searchHilite.removeAllFeatures();
-            var rec = this.getStore().getAt(row);
-            if (rec) {
-              searchHilite.addFeatures(makeFeatures(rec));
-            }
-            searchHilite.redraw();
-          }
-        }
-        ,mouseout : function(e,t) {
-          var row = this.getView().findRowIndex(t);
-          if (_.isNumber(row)) {
-            searchShadow.setVisibility(false);
-            searchHilite.removeAllFeatures();
-            searchHilite.redraw();
-          }
-        }
-      }
     })
-    ,listeners : {
-      afterrender : function(cmp) {
-        cmp.addListener('resize',function(cmp,w) {
-          Ext.getCmp('searchText').setWidth(w - Ext.getCmp('restrictTimeSearchButton').getWidth() - Ext.getCmp('restrictGeoSearchButton').getWidth() - 100);
-        });
-      }
-    }
-  };
-
-  layersStore = new Ext.data.ArrayStore({
-    fields : [
-       {name : 'reportId'}
-      ,{name : 'lyrId'}
-      ,{name : 'name'}
-      ,{name : 'status'}
-      ,{name : 'reportTitle'}
-      ,{name : 'where'}
-      ,{name : 'visibility'}
-      ,{name : 'isAccessible'}
-      ,{name : 'getData'}
-      ,{name : 'rank'}
-    ]
-    ,listeners : {
-      add : function(sto) {
-        if (sto.getCount() > 0) {
-          Ext.getCmp('layersMsg').setText('Displaying datasets ' + 1 + ' - ' + sto.getCount() + ' of ' + sto.getCount());
-        }
-      }
-      ,remove : function(sto) {
-        if (sto.getCount() == 0) {
-          Ext.getCmp('layersMsg').setText('No datasets to display');
-        }
-      }
-    }
-  });
-
-  var layerPanel = {
-     region   : 'south'
-    ,id       : 'layerPanel'
-    ,title    : 'My Data'
-    ,split    : true
-    ,layout   : 'fit'
-    ,defaults : {border : false}
-    ,items    : [new Ext.grid.GridPanel({
-       store            : layersStore
-      ,disableSelection : true
-      ,columns          : [
-        {align : 'center',width : 40,renderer : function(val,p,rec) {
-          var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
-          return '<a href="javascript:removeWms(\'' + params.join("','") + '\')">' + '<img class="link" title="Remove layer" src="img/remove.png">' + '</a>';
-        }}
-        ,{id : 'name',dataIndex : 'name',header : 'Name',renderer : function(val,p,rec) {
-          return rec.get('reportTitle') + (!/ext-gen/.test(val) ? ' : ' + val : '');
-        }}
-        ,{align : 'center',width : 30,dataIndex : 'status',renderer : function(val,p,rec) {
-          return '<img ' + (val == 'loading' ? 'title="Loading..."' : '') + ' width=16 height=16 src="img/' + (val == 'loading' ? 'loading.gif' : 'blank.png') + '">';
-        }}
-        ,{align : 'center',id : 'where',width : 40,dataIndex : 'where',renderer : function(val,p,rec) {
-          var bounds = new OpenLayers.Bounds();
-          _.each(val,function(o) {
-            bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
-          });
-          bounds.transform(proj4326,proj3857);
-          return '<a class="link" title="Zoom to coverage area" href="javascript:map.zoomToExtent(new OpenLayers.Bounds(' + bounds.toString() + '))">' + '<img class="link" title="Zoom to coverage area" src="img/zoom_layer.png">' + '<br>Zoom<br>map</a>';
-        }}
-        ,{align : 'center',width : 60,dataIndex : 'visibility',renderer : function(val,p,rec) {
-          var params = [rec.get('reportId'),rec.get('lyrId'),rec.get('name')];
-          if (rec.get('isAccessible')) {
-            return '<a target=_blank class="link" title="Download link" href="' + rec.get('getData') + '">' + '<img class="link" title="Download link" width=16 height=16 src="img/download.png">' + '<br>Download<br>link</a>';
-          }
-          else {
-            return '<a class="link" title="Show / hide this layer on the map" href="javascript:toggleWmsVisibility(\'' + params.join("','") + '\')">' + '<img class="link" title="Show / hide this layer on the map" width=16 height=16 src="img/' + (val == 'visible' ? 'check_box.png' : 'empty_box.png') + '">' + '<br>Show<br>on map?</a>';
-          }
-        }}
-      ]
-      ,autoExpandColumn : 'name'
-      ,hideHeaders      : true
-      ,tbar             : [{text : 'Click on a link from your search results to add to your list.'}]
-      ,bbar             : ['->',{text : 'No datasets to display',id : 'layersMsg'}]
-      ,listeners : {
-        mouseover : function(e,t) {
-          var row = this.getView().findRowIndex(t);
-          if (_.isNumber(row)) {
-            searchHilite.removeAllFeatures();
-            var rec = this.getStore().getAt(row);
-            if (rec) {
-              searchHilite.addFeatures(makeFeatures(rec));
-            }
-            searchHilite.redraw();
-          }
-        }
-        ,mouseout : function(e,t) {
-          var row = this.getView().findRowIndex(t);
-          if (_.isNumber(row)) {
-            searchHilite.removeAllFeatures();
-            searchHilite.redraw();
-          }
-        }
-      }
-    })]
-  }
-
-  var mapPanel = {
-     html      : '<div id="map"></div>'
-    ,region    : 'center'
-    ,listeners : {
-      afterrender : function(p) {
-        initMap();
-      }
-      ,bodyresize : function(p,w,h) {
-        var el = document.getElementById('map');
-        if (el) {
-          el.style.width  = w;
-          el.style.height = h;
-          map.updateSize();
-        }
-      }
-    }
-  };
-
-  new Ext.Viewport({
-     layout : 'border'
-    ,items  : [ 
-      {
-        region : 'north'
-       ,title  : 'Earthcube'
-       ,border : false
-      }
-      ,searchPanel
-      ,{
-         layout   : 'border'
-        ,id       : 'vizPanel'
-        ,width    : 400 
-        ,region   : 'east'
-        ,border   : false
-        ,split    : true
-        ,items    : [
-           mapPanel
-          ,layerPanel
-        ]
-      }
-    ]
-    ,listeners : {afterrender : function() {
-      Ext.getCmp('layerPanel').setHeight(Ext.getCmp('searchPanel').getHeight() * 0.60);
-      Ext.getCmp('vizPanel').doLayout();
-    }}
   });
 }
 
@@ -696,218 +282,6 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
   );
 }
 
-function initMap() {
-  searchShadow = new OpenLayers.Layer.Vector(
-     'Search shadow'
-    ,{styleMap : new OpenLayers.StyleMap({
-      'default' : new OpenLayers.Style(
-        OpenLayers.Util.applyDefaults({
-           fillOpacity   : 0
-          ,strokeWidth   : '${getStrokeWidth}'
-          ,strokeColor   : '#888888'
-          ,strokeOpacity : 1
-        })
-        ,{
-          context : {
-            getStrokeWidth : function(f) {
-              // Thicken up border if the bbox is tiny compared to the map.
-              return (f.geometry.getArea() / map.getExtent().toGeometry().getArea()) < 0.000001 ? 10 : 1;
-            }
-          }
-        }
-      )
-    })}
-  );
-
-  searchHilite = new OpenLayers.Layer.Vector(
-     'Search hilite'
-    ,{styleMap : new OpenLayers.StyleMap({
-      'default' : new OpenLayers.Style(
-        OpenLayers.Util.applyDefaults({
-           fillOpacity   : 0.45
-          ,fillColor     : '#ffffff'
-          ,strokeWidth   : '${getStrokeWidth}'
-          ,strokeColor   : '#0000ff'
-          ,strokeOpacity : 1
-/*
-          ,label         : "${title}"
-          ,fontColor     : '#000000'
-          ,fontSize      : '11px'
-          ,fontFamily    : 'arial'
-          ,fontWeight    : 'bold'
-*/
-        })
-        ,{
-          context : {
-            getStrokeWidth : function(f) {
-              // Thicken up border if the bbox is tiny compared to the map.
-              return (f.geometry.getArea() / map.getExtent().toGeometry().getArea()) < 0.000001 ? 10 : 1;
-            }
-          }
-        }
-      )
-    })}
-  );
-
-  map = new OpenLayers.Map('map',{
-    layers            : [
-      new OpenLayers.Layer.XYZ(
-         'ESRI Ocean'
-        ,'http://services.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/${z}/${y}/${x}.jpg'
-        ,{
-           sphericalMercator : true
-          ,isBaseLayer       : true
-          ,wrapDateLine      : true
-        }
-      )
-      ,searchShadow
-      ,searchHilite
-    ]
-    ,controls          : [
-       new OpenLayers.Control.Navigation()
-      ,new OpenLayers.Control.MousePosition({displayProjection : proj4326})
-      ,new OpenLayers.Control.ZoomPanel()
-    ]
-    ,projection        : proj3857
-    ,displayProjection : proj4326
-    ,units             : 'm'
-    ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
-    ,center            : new OpenLayers.LonLat(0,0)
-    ,zoom              : 0
-  });
-
-  map.events.register('addlayer',this,function(e) {
-    layersStore.add(new layersStore.recordType({
-       reportId      : e.layer.attributes.reportId
-      ,lyrId         : e.layer.attributes.lyrId
-      ,name          : e.layer.name
-      ,status        : (e.layer.attributes.isAccessible ? e.layer.attributes.isAccessible : 'loading')
-      ,reportTitle   : e.layer.attributes.reportTitle
-      ,where         : e.layer.attributes.where
-      ,visibility    : 'visible'
-      ,isAccessible  : e.layer.attributes.isAccessible
-      ,getData       : '#'
-      ,rank          : e.layer.attributes.isAccessible ? 1 : 0
-    }));
-    layersStore.sort(
-       [{field : 'rank'},{field : 'reportTitle'},{field : 'name'}]
-      ,'ASC'
-    );
-    if (!e.layer.isBaseLayer) {
-      map.setLayerIndex(e.layer,map.layers.length - countTopLayers() - 1);
-    }
-  });
-  map.events.register('removelayer',this,function(e) {
-    var idx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == e.layer.attributes.reportId && rec.get('lyrId') == e.layer.attributes.lyrId;
-    });
-    if (idx >= 0) {
-      layersStore.removeAt(idx);
-    }
-  });
-  map.events.register('moveend',this,function(e) {
-    Ext.getCmp('searchText').onTrigger2Click();
-  });
-}
-
-function syncMapWithResults(sto,lyr) {
-  var features = [];
-  sto.each(function(rec) {
-    features = features.concat(makeFeatures(rec));
-  });
-  lyr.removeFeatures(lyr.features);
-  lyr.addFeatures(features);
-  lyr.redraw();
-}
-
-function makeFeatures(rec) {
-  var features = [];
-  _.each(rec.get('where'),function(o) {
-    o.west = o.west <= -179 ? -178 : o.west;
-    o.south = o.south <= -89 ? -88 : o.south;
-    o.east = o.east >= 179 ? 178 : o.east;
-    o.north = o.north >= 89 ? 88 : o.north;
-    var g = {
-       type        : 'Polygon'
-      ,coordinates : [[
-         [o.west,o.south]
-        ,[o.east,o.south]
-        ,[o.east,o.north]
-        ,[o.west,o.north]
-        ,[o.west,o.south]
-      ]]
-    };
-    var geojson = new OpenLayers.Format.GeoJSON();
-    var f       = geojson.read({
-       type     : 'FeatureCollection'
-      ,features : [{
-         type       : 'Feature'
-        ,geometry   : g
-        ,properties : {
-          title : wordwrap(rec.get('title') ? ellipse(rec.get('title'),40) : '',20,"\n")
-        }
-      }]
-    });
-    f[0].geometry.transform(proj4326,proj3857);
-    features.push(f[0]);
-  });
-  return features;
-}
-
-function toggleWmsVisibility(reportId,lyrId,name) {
-  _.each(map.getLayersByName(name),function(o) {
-    if (o.attributes.reportId == reportId && o.attributes.lyrId == lyrId) {
-      o.setVisibility(!o.visibility);
-    }
-  });
-}
-
-function removeWms(reportId,lyrId,name) {
-  _.each(map.getLayersByName(name),function(o) {
-    if (o.attributes.reportId == reportId && o.attributes.lyrId == lyrId) {
-      map.removeLayer(o);
-    }
-  });
-  searchShadow.setVisibility(false);
-  searchHilite.removeAllFeatures();
-  searchHilite.redraw();
-}
-
-function addData(reportId,lyrId) {
-  var searchIdx = searchStore.findExact('id',reportId);
-  if (searchIdx >= 0) {
-    // check to see if it's been added already
-    var lyrIdx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
-    });
-    if (lyrIdx >= 0) {
-      Ext.Msg.alert('Error',"We're sorry, but you have already added this dataset to your list.");
-      return false;
-    }
-    else {
-      var lyr = new OpenLayers.Layer.Image(
-         lyrId
-        ,'img/blank.png'
-        ,new OpenLayers.Bounds(0,0,0,0)
-        ,new OpenLayers.Size(10,10)
-      );
-
-      var rec = searchStore.getAt(searchIdx);
-      if (!lyr.attributes) {
-        lyr.attributes = {};
-      }
-      lyr.attributes.reportId     = reportId;
-      lyr.attributes.lyrId        = lyrId;
-      lyr.attributes.reportTitle  = rec.get('title');
-      lyr.attributes.where        = rec.get('where');
-      lyr.attributes.isAccessible = rec.get('node').isAccessible();
-
-      map.addLayer(lyr);
-      getData(reportId,lyrId);
-    }
-  }
-}
-
 function showDownloadModal(reportId) {
   $('#download-modal').data('reportId',reportId);
   var searchIdx = searchStore.findExact('id',reportId);
@@ -941,7 +315,7 @@ function showDownloadModal(reportId) {
       );
 
       if (dataAccess.length == 0) {
-        Ext.Msg.alert('Download error','Go away!');
+        alert('download error');
         return;
       }
 
@@ -1053,10 +427,9 @@ function createDownloadLink() {
   var idx = searchStore.findExact('id',$('#download-modal').data('reportId'));
   if (idx >= 0) {
     searchStore.getAt(idx).get('node').accessLink(function(resp) {
-      console.log(resp);
+      alert(resp);
     },options);
   }
-
 }
 
 function addToMapModal(reportId) {
@@ -1078,338 +451,8 @@ function addToMapModal(reportId) {
   }
 }
 
-function addVec(reportId,lyrName) {
-  searchShadow.setVisibility(false);
-  var searchIdx = searchStore.findExact('id',reportId);
-  if (searchIdx >= 0) {
-    // check to see if it's been added already
-    var lyrIdx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == reportId && rec.get('name') == lyrName;
-    });
-    if (lyrIdx >= 0) {
-      Ext.Msg.alert('Error',"We're sorry, but you have already added this layer to your map.");
-      return false;
-    }
-    else {
-      searchStore.getAt(searchIdx).get('node').olVector_Layer(function(resp) {
-        var lyr = _.findWhere(resp,{name : lyrName});
-
-        lyr.projection = proj4326;
-        lyr.styleMap   = new OpenLayers.StyleMap({
-          'default' : new OpenLayers.Style(
-            OpenLayers.Util.applyDefaults({
-               fillOpacity   : 0
-              ,strokeWidth   : 3
-              ,strokeColor   : '#ff0000'
-              ,strokeOpacity : 1
-            })
-          )
-        });
-
-        var rec = searchStore.getAt(searchIdx);
-        if (!lyr.attributes) {
-          lyr.attributes = {};
-        }
-        lyr.attributes.reportId    = reportId;
-        lyr.attributes.lyrId       = lyr.id;
-        lyr.attributes.reportTitle = rec.get('title');;
-        lyr.attributes.where       = rec.get('where');
-
-        lyr.events.register('loadstart',this,function(e) {
-          var idx = layersStore.findBy(function(rec) {
-            return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
-          });
-          if (idx >= 0) {
-            var rec = layersStore.getAt(idx);
-            rec.set('status','loading');
-            rec.commit();
-          }
-        });
-        lyr.events.register('loadend',this,function(e) {
-          var idx = layersStore.findBy(function(rec) {
-            return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
-          });
-          if (idx >= 0) {
-            var rec = layersStore.getAt(idx);
-            rec.set('status','');
-            rec.commit();
-          }
-        });
-        lyr.events.register('visibilitychanged',this,function(e) {
-          var idx = layersStore.findBy(function(rec) {
-            return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
-          });
-          if (idx >= 0) {
-            var rec = layersStore.getAt(idx);
-            rec.set('visibility',e.object.visibility ? 'visible' : 'invisible');
-            rec.commit();
-          }
-        });
-
-        map.addLayer(lyr);
-      },true);
-    }
-  }
-}
-
-function addWms(reportId,lyrName) {
-  searchShadow.setVisibility(false);
-  var searchIdx = searchStore.findExact('id',reportId);
-  if (searchIdx >= 0) {
-    // check to see if it's been added already
-    var lyrIdx = layersStore.findBy(function(rec) {
-      return rec.get('reportId') == reportId && rec.get('name') == lyrName;
-    });
-    if (lyrIdx >= 0) {
-      $('#add-to-map-modal ul').html('<li>' + "We're sorry, but you have already added this layer to your map." + '</li>');
-      return false;
-    }
-    else {
-      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('node').olWMS_Layer(),{name : lyrName});
-      var rec = searchStore.getAt(searchIdx);
-      if (!lyr.attributes) {
-        lyr.attributes = {};
-      }
-      lyr.attributes.reportId    = reportId;
-      lyr.attributes.lyrId       = lyr.id;
-      lyr.attributes.reportTitle = rec.get('title');
-      lyr.attributes.where       = rec.get('where');
-
-      lyr.events.register('loadstart',this,function(e) {
-        var idx = layersStore.findBy(function(rec) {
-          return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
-        });
-        if (idx >= 0) {
-          var rec = layersStore.getAt(idx);
-          rec.set('status','loading');
-          rec.commit();
-        }
-      });
-      lyr.events.register('loadend',this,function(e) {
-        var idx = layersStore.findBy(function(rec) {
-          return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
-        });
-        if (idx >= 0) {
-          var rec = layersStore.getAt(idx);
-          rec.set('status','');
-          rec.commit();
-        }
-      });
-      lyr.events.register('visibilitychanged',this,function(e) {
-        var idx = layersStore.findBy(function(rec) {
-          return rec.get('reportId') == e.object.attributes.reportId && rec.get('lyrId') == e.object.attributes.lyrId;
-        });
-        if (idx >= 0) {
-          var rec = layersStore.getAt(idx);
-          rec.set('visibility',e.object.visibility ? 'visible' : 'invisible');
-          rec.commit();
-        }
-      });
-
-      map.addLayer(lyr);
-      $('#add-to-map-modal').modal('hide');
-    }
-  }
-}
-
-function getData(reportId,lyrId) {
-  var searchIdx = searchStore.findExact('id',reportId);
-  if (searchIdx >= 0) {
-    var node = searchStore.getAt(searchIdx).get('node');
-    node.accessOptions(function(resp) {
-      var data = [];
-      _.each(resp,function(accessOptions) {
-        _.each(_.sortBy(accessOptions.validOptions,function(o){return o.name.toLowerCase() + o.crs.toLowerCase() + o.rasterFormat.toLowerCase()}),function(o) {
-          data.push([
-             data.length
-            ,accessOptions.defaultOptions
-            ,o.name
-            ,o.crs
-            ,o.linkage
-            ,o.protocol
-            ,o.rasterFormat
-            ,o.resampling
-            ,o.subsetting
-            ,[o.name,o.crs,o.rasterFormat].join(', ')
-          ]);
-        });
-      });
-
-      var sto = new Ext.data.ArrayStore({
-         fields : ['id','defaultOptions','name','crs','linkage','protocol','rasterFormat','resampling','subsetting','lbl']
-        ,data   : data
-      });
-
-      var win = new Ext.Window({
-         title           : 'Build download link'
-        ,layout          : 'fit'
-        ,width           : 345
-        ,height          : 400
-        ,constrainHeader : true
-        ,modal           : true
-        ,items           : new Ext.FormPanel({
-           bodyStyle      : 'padding:6'
-          ,defaults       : {border : false,width : 200}
-          ,labelSeparator : ''
-          ,id             : 'downloadParamGridTable'
-          ,items          : [
-            new Ext.form.ComboBox({
-               store          : sto
-              ,id             : 'presets'
-              ,forceSelection : true
-              ,triggerAction  : 'all'
-              ,selectOnFocus  : true
-              ,mode           : 'local'
-              ,displayField   : 'lbl'
-              ,valueField     : 'id'
-              ,fieldLabel     : 'Presets'
-              ,listWidth      : 300
-              ,listeners      : {select : function(cmp,rec) {
-                _.each(['name','crs','rasterFormat'],function(o) {
-                  Ext.getCmp(o).setValue(rec.get(o));
-                });
-                _.each(['west','south','east','north','from','to'],function(o) {
-                  rec.get('subsetting') ? Ext.getCmp(o).enable() : Ext.getCmp(o).disable();
-                });
-                _.each(['lonResolution','latResolution'],function(o) {
-                  rec.get('resampling') ? Ext.getCmp(o).enable() : Ext.getCmp(o).disable();
-                });
-                _.each(['lonResolution','latResolution'],function(o) {
-                  Ext.getCmp(o).setValue(rec.get('defaultOptions').resolution ? rec.get('defaultOptions').resolution[o] : '');
-                });
-                _.each(['west','south','east','north'],function(o) {
-                  Ext.getCmp(o).setValue(rec.get('defaultOptions').spatialSubset ? rec.get('defaultOptions').spatialSubset[o] : '');
-                });
-                _.each(['from','to'],function(o) {
-                  Ext.getCmp(o).setValue(rec.get('defaultOptions').temporalSubset ? rec.get('defaultOptions').temporalSubset[o] : '');
-                });
-              }}
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Name'
-              ,id         : 'name'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'CRS'
-              ,id         : 'crs'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Format'
-              ,id         : 'rasterFormat'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Min longitude'
-              ,id         : 'west'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Min latitude'
-              ,id         : 'south'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Max longitude'
-              ,id         : 'east'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Max latitude'
-              ,id         : 'north'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Longitude res.'
-              ,id         : 'lonResolution'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Latitude res.'
-              ,id         : 'latResolution'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Time from'
-              ,id         : 'from'
-              ,disabled   : true
-            })
-            ,new Ext.form.TextField({
-               fieldLabel : 'Time to'
-              ,id         : 'to'
-              ,disabled   : true
-            })
-          ]
-          ,buttons : [
-            {
-               text    : 'Cancel'
-              ,handler : function() {
-                removeWms(reportId,lyrId,lyrId);
-                win.close();
-              }
-            } 
-            ,{
-               text    : 'OK'
-              ,handler : function() {
-                var sto = Ext.getCmp('presets').getStore();
-                var options = sto.getAt(sto.findExact('id',Ext.getCmp('presets').getValue())).get('defaultOptions');
-                _.each(['name','crs','rasterFormat'],function(o) {
-                  options[o] = Ext.getCmp(o).getValue();
-                });
-                _.each(['west','south','east','north'],function(o) {
-                  if (!_.isEmpty(Ext.getCmp(o).getValue())) {
-                    if (!options['spatialSubset']) {
-                      options['spatialSubset'] = {};
-                    }
-                    options['spatialSubset'][o] = Ext.getCmp(o).getValue();
-                  }
-                });
-                _.each(['from','to'],function(o) {
-                  if (!_.isEmpty(Ext.getCmp(o).getValue())) {
-                    if (!options['temporalSubset']) {
-                      options['temporalSubset'] = {};
-                    }
-                    options['temporalSubset'][o] = Ext.getCmp(o).getValue();
-                  }
-                });
-                _.each(['lonResolution','latResolution'],function(o) {
-                  if (!_.isEmpty(Ext.getCmp(o).getValue())) {
-                    if (!options['resolution']) {
-                      options['resolution'] = {};
-                    }
-                    options['resolution'][o] = Ext.getCmp(o).getValue();
-                  }
-                });
-                node.accessLink(function(resp) {
-                  var idx = layersStore.findBy(function(rec) {
-                    return rec.get('reportId') == reportId && rec.get('lyrId') == lyrId;
-                  });
-                  if (idx >= 0) {
-                    var rec = layersStore.getAt(idx);
-                    rec.set('getData',resp);
-                    rec.commit();
-                  }
-                  win.close();
-                },options);
-              }
-            }
-          ]
-          ,listeners : {afterrender : function() {
-            if (sto.getCount() > 0) {
-              Ext.getCmp('presets').setValue(0);
-              Ext.getCmp('presets').fireEvent('select',null,sto.getAt(0));
-            }
-          }}
-        })
-      });
-      win.show();
-    },true);
-  }
-}
-
-function countTopLayers() {
-  return 2;
+function addWms(p) {
+  alert(p[0]);
 }
 
 function isoDateToDate(s) {
@@ -1430,19 +473,6 @@ function isoDateToDate(s) {
   else {
     return false;
   }
-}
-
-// http://james.padolsey.com/javascript/wordwrap-for-javascript/
-function wordwrap(str,width,brk,cut) {
-  brk = brk || '\n';
-  width = width || 75;
-  cut = cut || false;
-
-  if (!str) { return str; }
- 
-  var regex = '.{1,' +width+ '}(\\s|$)' + (cut ? '|.{' +width+ '}|.+$' : '|\\S+?(\\s|$)');
- 
-  return str.match( RegExp(regex, 'g') ).join( brk );
 }
 
 function ellipse(str,length) {

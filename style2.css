@@ -1,0 +1,130 @@
+html {
+	height:100%;
+	overflow: hidden;
+}
+
+body {
+	background-color: #fff; 
+	background-image: -webkit-linear-gradient(left, #fff, #85c1de);
+	background-image:    -moz-linear-gradient(left, #fff, #85c1de);
+	background-image:     -ms-linear-gradient(left, #fff, #85c1de);
+	background-image:      -o-linear-gradient(left, #fff, #85c1de);
+	background-image:         linear-gradient(left, #fff, #85c1de);
+	padding-top: 80px;
+	font-size: 16px;
+	font-family: Arial, sans-serif;
+	color: #0c0c0c;
+}
+
+a {outline: 0!important;}
+
+.navbar {
+	background-color: #eee; 
+	background-image: -webkit-linear-gradient(top, #fff, #eee);
+	background-image:    -moz-linear-gradient(top, #fff, #eee);
+	background-image:     -ms-linear-gradient(top, #fff, #eee);
+	background-image:      -o-linear-gradient(top, #fff, #eee);
+	background-image:         linear-gradient(to bottom, #fff, #eee);
+	height: 62px;
+	border-bottom: 1px solid #bdbcbd !important;
+}
+
+ul.nav {
+	padding-top: 9px;
+}
+
+ul.nav li {
+	width: 158px;
+	height: 59px;
+	text-indent: -99999px;
+	margin-right: 5px;
+}
+
+ul.nav > li > a {
+	padding-top:29px;
+}
+
+ul.nav > li > a:hover, ul.nav > li.active > a:hover, ul.nav > li > a:focus {
+	background-color: transparent!important;
+}
+
+ul.nav li:first-child a {
+	background: url('img/grey_catalogue_tab.png') no-repeat;
+}
+
+ul.nav li:last-child a {
+	background: url('img/grey_map_view_tab.png') no-repeat;
+}
+
+ul.nav li:first-child.active a {
+	background: url('img/blue_catalogue_tab.png') no-repeat;
+}
+
+ul.nav li:last-child.active a {
+	background: url('img/blue_map_view_tab.png') no-repeat;
+}
+
+#search-div {
+	background: #edece8;
+	height: 56px;
+	width: 406px;
+	padding-left: 7px;
+	padding-right: 0;
+	margin-left: 8px;
+	float: left;
+}
+	#search-div input[type="search"] {
+		height: 40px;
+		width: 298px;
+		margin-top: 8px;
+		margin-right: 4px;
+		float: left;
+		font-size: 21px;
+		padding-left: 7px;
+	}
+
+	#search-div img {
+		margin-top: 8px;
+	}
+
+#filters, #pagination {
+	float:left;
+	padding-left: 12px;
+}
+
+#pagination {
+	padding-left: 28px;
+}
+	#filters input[type="checkbox"] {
+		width: 16px;
+		height: 16px;
+	}
+
+	#filters p {
+		line-height: 20px!important;
+		margin-top: 5px;
+	}
+
+	#filters label {
+		font-weight: normal;
+		margin-bottom: 0;
+	}
+
+	#filters p, #pagination p{
+		float: left;
+		padding-right: 10px;
+		line-height: 56px;
+		margin-bottom: 0;
+	}
+
+	#pagination img {
+		margin-top: 8px;
+	}
+
+body > .container-fluid > .row:last-child {
+	margin-top: 8px;
+}
+
+#search-results {
+	padding-right: 0;
+}
