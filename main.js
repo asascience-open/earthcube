@@ -11,8 +11,7 @@ var searchShadow;
 var searchHilite;
 
 function init() {
-  $('#add-to-map-modal').modal({show: false});
-  $('#download-modal').modal({show: false});
+  $('#add-to-map-modal, #download-modal, #link-moodal').modal({show: false});
   $('#download-modal .btn-primary').on('click',function() {
     createDownloadLink();
   });

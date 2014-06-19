@@ -132,3 +132,7 @@
 #download-modal .center {
   text-align : center;
 }
+
+#link-modal .modal-dialog {
+  width: 300px;
+}
