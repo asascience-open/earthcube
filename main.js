@@ -13,6 +13,9 @@ var searchHilite;
 function init() {
   $('#add-to-map-modal').modal({show: false});
   $('#download-modal').modal({show: false});
+  $('#download-modal .btn-primary').on('click',function() {
+    createDownloadLink();
+  });
   $('.selectpicker').selectpicker();
 
   searchStore = new Ext.data.Store({
@@ -112,7 +115,7 @@ function init() {
           var download = '';
           if (rec.get('node')) {
             var params = [rec.get('id')];
-            download = '<a href="javascript:downloadModal(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
+            download = '<a href="javascript:showDownloadModal(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
           }
 
           var addToMap = '';
@@ -898,7 +901,8 @@ function addData(reportId,lyrId) {
   }
 }
 
-function downloadModal(reportId) {
+function showDownloadModal(reportId) {
+  $('#download-modal').data('reportId',reportId);
   var searchIdx = searchStore.findExact('id',reportId);
   if (searchIdx >= 0) {
     var node = searchStore.getAt(searchIdx).get('node');
@@ -906,7 +910,7 @@ function downloadModal(reportId) {
       // If we get here, we are assuming that there is at least one form of dataAccess.
       dataAccess = [];
       _.each(resp,function(accessOptions) {
-        _.each(_.sortBy(accessOptions.validOptions,function(o){return o.crs.toLowerCase() + o.name.toLowerCase() + o.rasterFormat.toLowerCase()}),function(o) {
+        _.each(_.sortBy(accessOptions.validOptions,function(o){return (/epsg:4326/i.test(o.crs.toLowerCase()) ? 'a' : o.crs.toLowerCase())  + o.name.toLowerCase() + o.rasterFormat.toLowerCase()}),function(o) {
           dataAccess.push({
              accessOptions : accessOptions.defaultOptions
             ,name          : o.name
@@ -945,16 +949,95 @@ function downloadModal(reportId) {
         $('#crs option').filter(function() {return $(this).html() == rec.crs}).prop('selected',true);
         $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
         $('.selectpicker').selectpicker('refresh');
+        syncDownloadOptions();
       });
       $('#crs').change(function() {
         var rec = _.findWhere(dataAccess,{name : $('#name').val(),crs : $(this).val()});
         $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
         $('.selectpicker').selectpicker('refresh');
+        syncDownloadOptions();
       });
 
+      syncDownloadOptions();
       $('#download-modal').modal('show');
     },true);
   }
+}
+
+function syncDownloadOptions() {
+  var rec = _.findWhere(dataAccess,{
+     name         : $('#name').val()
+    ,crs          : $('#crs').val()
+    ,rasterFormat : $('#rasterFormat').val()
+  });
+  _.each(['west','south','east','north','from','to'],function(o) {
+    $('#' + o).prop('disabled',!rec.subsetting);
+  });
+  _.each(['lonResolution','latResolution'],function(o) {
+    $('#' + o).prop('disabled',!rec.resampling);
+  });
+}
+
+function createDownloadLink() {
+  var rec = _.findWhere(dataAccess,{
+     name         : $('#name').val()
+    ,crs          : $('#crs').val()
+    ,rasterFormat : $('#rasterFormat').val()
+  });
+
+  var options = rec.accessOptions;
+  _.each(['name','crs','rasterFormat'],function(o) {
+    options[o] = $('#' + o).val();
+  });
+
+  _.each(['west','south','east','north'],function(o) {
+    var val = $('#' + o).val();
+    if (!_.isEmpty(val) && !$('#' + o).prop('disabled')) {
+      if (!options['spatialSubset']) {
+        options['spatialSubset'] = {};
+      }
+      options['spatialSubset'][o] = val;
+    }
+    else if (options['spatialSubset']) {
+      delete options['spatialSubset'][o];
+    }
+  });
+
+  _.each(['from','to'],function(o) {
+    var val = $('#' + o).val();
+    if (!_.isEmpty(val) && !$('#' + o).prop('disabled')) {
+      if (!options['temporalSubset']) {
+        options['temporalSubset'] = {};
+      }
+      options['temporalSubset'][o] = val;
+    }
+    else if (options['temporalSubset']) {
+      delete options['temporalSubset'][o];
+    }
+  });
+ 
+  _.each(['lonResolution','latResolution'],function(o) {
+    var val = $('#' + o).val();
+    if (!_.isEmpty(val) && !$('#' + o).prop('disabled')) {
+      if (!options['resolution']) {
+        options['resolution'] = {};
+      }
+      options['resolution'][o] = val;
+    }
+    else if (options['resolution']) {
+      delete options['resolution'][o];
+    }
+  });
+ 
+  console.dir(options);
+
+  var idx = searchStore.findExact('id',$('#download-modal').data('reportId'));
+  if (idx >= 0) {
+    searchStore.getAt(idx).get('node').accessLink(function(resp) {
+      console.log(resp);
+    },options);
+  }
+
 }
 
 function addToMapModal(reportId) {
