@@ -99,3 +99,17 @@
   padding-left    : 0;
 }
 
+#download-modal .modal-dialog {
+  width : 500px;
+}
+
+#download-modal .modal-dialog .form-group {
+  margin-bottom : 3px;
+}
+
+#download-modal .modal-dialog .form-group select {
+  font-size : 14px;
+}
+
+#download-modal .modal-footer {margin-top:0;}
+

@@ -1,6 +1,7 @@
 var pageSize = 20;
 var searchStore;
 var layersStore;
+var dataAccess;
 
 var map;
 var proj3857 = new OpenLayers.Projection("EPSG:3857");
@@ -10,9 +11,9 @@ var searchShadow;
 var searchHilite;
 
 function init() {
-  $('#add-to-map-modal').modal({
-    show: false
-  });
+  $('#add-to-map-modal').modal({show: false});
+  $('#download-modal').modal({show: false});
+  $('.selectpicker').selectpicker();
 
   searchStore = new Ext.data.Store({
     reader     : new Ext.data.JsonReader({
@@ -110,8 +111,8 @@ function init() {
 
           var download = '';
           if (rec.get('node')) {
-            var params = [rec.get('id'),Ext.id()];
-            download = '<a href="javascript:addData(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
+            var params = [rec.get('id')];
+            download = '<a href="javascript:downloadModal(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
           }
 
           var addToMap = '';
@@ -894,6 +895,60 @@ function addData(reportId,lyrId) {
       map.addLayer(lyr);
       getData(reportId,lyrId);
     }
+  }
+}
+
+function downloadModal(reportId) {
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    var node = searchStore.getAt(searchIdx).get('node');
+    node.accessOptions(function(resp) {
+      dataAccess = [];
+      _.each(resp,function(accessOptions) {
+        _.each(_.sortBy(accessOptions.validOptions,function(o){return o.crs.toLowerCase() + o.name.toLowerCase() + o.rasterFormat.toLowerCase()}),function(o) {
+          dataAccess.push({
+             accessOptions : accessOptions.defaultOptions
+            ,name          : o.name
+            ,crs           : o.crs
+            ,linkage       : o.linkage
+            ,protocol      : o.protocol
+            ,rasterFormat  : o.rasterFormat
+            ,resampling    : o.resampling
+            ,subsetting    : o.subsetting
+          });
+        });
+      });
+      $('#name').html(
+        '<option>' + _.uniq(_.sortBy(_.pluck(dataAccess,'name'),function(o){return o.toLowerCase()}),true).join('</option><option>') + '</option>'
+      );
+      $('#crs').html(
+        '<option>' + _.uniq(_.sortBy(_.pluck(dataAccess,'crs'),function(o){return o.toLowerCase()}),true).join('</option><option>') + '</option>'
+      );
+      $('#rasterFormat').html(
+        '<option>' + _.uniq(_.sortBy(_.pluck(dataAccess,'rasterFormat'),function(o){return o.toLowerCase()}),true).join('</option><option>') + '</option>'
+      );
+
+      // Try to find the first combo for 4326 that will work.
+      var init = _.findWhere(dataAccess,{crs : 'EPSG:4326'});
+      if (!init) {
+        init = dataAccess[0];
+      }
+      $('#name option').filter(function() {return $(this).html() == init.name}).prop('selected',true);
+      $('#crs option').filter(function() {return $(this).html() == init.crs}).prop('selected',true);
+      $('#rasterFormat option').filter(function() {return $(this).html() == init.rasterFormat}).prop('selected',true);
+
+      $('.selectpicker').selectpicker('refresh');
+      $('#download-modal').modal('show');
+
+      $('#crs').change(function() {
+        $('#crs option:selected').each(function() {
+          var rec = _.find(dataAccess,function(o) {
+            return o.crs == $(this).text();
+          });
+          console.dir(rec);
+        });
+      });
+    },true);
   }
 }
 
