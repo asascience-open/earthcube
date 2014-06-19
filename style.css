@@ -77,7 +77,7 @@
   cursor          : auto;
 }
 
-#searchPanel .buttons a:last-child {
+#searchPanel .buttons a:not([href]) {
   float : right;
 }
 
