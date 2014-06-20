@@ -162,8 +162,8 @@ function init() {
           ,$('#search').val()
           ,opt.params ? opt.params.start : 1
           ,$('#restrict').prop('checked') ? map.getExtent().transform(proj3857,proj4326).toArray() : false
-          ,$('#date-slider').dateRangeSlider('min')
-          ,$('#date-slider').dateRangeSlider('max')
+          ,false && $('#date-slider').dateRangeSlider('min')
+          ,false && $('#date-slider').dateRangeSlider('max')
         );
       }
       ,load : function(sto) {
@@ -427,7 +427,9 @@ function showDownloadModal(reportId,node) {
       );
 
       if (dataAccess.length == 0) {
-        alert('download error');
+        $('#link-modal .modal-title').html('Error');
+        $('#link-modal .modal-body ul').html('<li>Sorry, but there was an error accessing the data.</li>');
+        $('#link-modal').modal('show');
         return;
       }
 
@@ -545,13 +547,17 @@ function createDownloadLink() {
   });
 
   if (errors.length > 0) {
-    alert('There was a problem with one or more of your input parameters.  Please try again.');
+    $('#link-modal .modal-title').html('Error');
+    $('#link-modal .modal-body ul').html('<li>There was a problem with one or more of your input parameters.  Please try again.</li>');
+    $('#link-modal').modal('show');
   }
   else {
     var idx = searchStore.findExact('id',$('#download-modal').data('reportId'));
     if (idx >= 0) {
       searchStore.getAt(idx).get('node').accessLink(function(resp) {
-        alert(resp);
+        $('#link-modal .modal-title').html('Download Link');
+        $('#link-modal .modal-body ul').html('<li>This <a target=_blank href="' + resp + '">Download Link</a> may be opened directly and is suitable for bookmarking.</li>');
+        $('#link-modal').modal('show');
       },options);
     }
   }
@@ -576,7 +582,7 @@ function addToMapModal(reportId) {
     });
     var all = wms.concat(vec);
     if (all.length == 1) {
-      addVec(single[0],single[1]);
+      vec.length > 0 ? addVec(single[0],single[1]) : addWms(single[0],single[1]);
     }
     else {
       $('#add-to-map-modal ul').html('<li>' + all.join('</li><li>') + '</li>');
@@ -590,7 +596,9 @@ function addWms(reportId,lyrName) {
   if (searchIdx >= 0) {
     // check to see if it's been added already
     if (_.findWhere(mapView.layers,{reportId : reportId,name : lyrName})) {
-      alert("We're sorry, but you have already added this layer to your map.");
+      $('#link-modal .modal-title').html('Error');
+      $('#link-modal .modal-body ul').html('<li>Sorry, but this layer has already been added to your map.</li>');
+      $('#link-modal').modal('show');
       return false;
     }
     else {
@@ -624,8 +632,9 @@ function addVec(reportId,lyrName) {
   if (searchIdx >= 0) {
     // check to see if it's been added already
     if (_.findWhere(mapView.layers,{reportId : reportId,name : lyrName})) {
-      alert("We're sorry, but you have already added this layer to your map.");
-      return false;
+      $('#link-modal .modal-title').html('Error');
+      $('#link-modal .modal-body ul').html('<li>Sorry, but this layer has already been added to your map.</li>');
+      $('#link-modal').modal('show');
     }
     else {
       $('#add-to-map-modal').modal('hide');
@@ -752,7 +761,7 @@ function initMap() {
     ,units             : 'm'
     ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
     ,center            : new OpenLayers.LonLat(0,0)
-    ,zoom              : 0
+    ,zoom              : 1
   });
 
   map.events.register('moveend',this,function(e) {
