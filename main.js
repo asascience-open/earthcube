@@ -2,16 +2,25 @@ var pageSize = 20;
 var searchStore;
 var dataAccess;
 
+var map;
+var proj3857 = new OpenLayers.Projection("EPSG:3857");
+var proj4326 = new OpenLayers.Projection("EPSG:4326");
+
+var searchShadow;
+var searchHilite;
+
 function resize() {
   var offset = 170;
   if ($('ul.nav li:last-child').hasClass('active')) {
     offset = 105;
   }
-  $('#search-results, #map').height($(window).height() - offset);
+  $('#search-results').height($(window).height() - offset);
+  $('#map').height($(window).height() - offset - 2);
   var cmp = Ext.getCmp('searchPanel');
   if (cmp && cmp.rendered) {
     cmp.setSize($('#search-results').width(),$('#search-results').height());
   }
+  map && map.updateSize();
 }
 
 window.onresize = function(e){
@@ -19,6 +28,12 @@ window.onresize = function(e){
 };
 
 function init() {
+  initMap();
+
+  $('#restrict').change(function() {
+    searchStore.load();
+  });
+
   $('#add-to-map-modal, #download-modal, #link-modal').modal({show: false});
   $('#download-modal .btn-primary').on('click',function() {
     createDownloadLink();
@@ -54,11 +69,11 @@ function init() {
 
   $('#date-slider').dateRangeSlider({
     bounds : {
-       min : new Date(2014,0,1)
+       min : new Date(2012,0,1)
       ,max : new Date(Date.now())
     }
     ,defaultValues : {
-       min : new Date(2014,0,1)
+       min : new Date(2012,0,1)
       ,max : new Date(Date.now())
     }
   });
@@ -86,7 +101,6 @@ function init() {
     ,remoteSort : true
     ,baseParams : {start : 1}
     ,proxy      : new Ext.data.MemoryProxy()
-    ,autoLoad   : true
     ,listeners  : {
       beforeload : function(sto,opt) {
         search(
@@ -94,10 +108,19 @@ function init() {
           ,sto
           ,$('#search').val()
           ,opt.params ? opt.params.start : 1
-          ,false
+          ,$('#restrict').prop('checked') ? map.getExtent().transform(proj3857,proj4326).toArray() : false
           ,$('#date-slider').dateRangeSlider('min')
           ,$('#date-slider').dateRangeSlider('max')
         );
+      }
+      ,load : function(sto) {
+        searchHilite.removeAllFeatures();
+        syncMapWithResults(sto,searchShadow); 
+        searchShadow.setVisibility(true);
+      }
+      ,clear : function(sto) {
+        searchHilite.removeAllFeatures();
+        syncMapWithResults(sto,searchShadow);
       }
     }
   });
@@ -232,6 +255,27 @@ function init() {
           };
         }
       })
+      ,listeners : {
+        mouseover : function(e,t) {
+          var row = this.getView().findRowIndex(t);
+          if (_.isNumber(row)) {
+            searchShadow.setVisibility(true);
+            searchHilite.removeAllFeatures();
+            var rec = this.getStore().getAt(row);
+            if (rec) {
+              searchHilite.addFeatures(makeFeatures(rec));
+            }
+            searchHilite.redraw();
+          }
+        }
+        ,mouseout : function(e,t) {
+          var row = this.getView().findRowIndex(t);
+          if (_.isNumber(row)) {
+            searchHilite.removeAllFeatures();
+            searchHilite.redraw();
+          }
+        }
+      }
     })
   });
 }
@@ -240,13 +284,12 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
   cmp.getEl().mask('<table class="maskText"><tr><td>Loading...&nbsp;</td><td><img src="./lib/ext-3.4.1/resources/images/default/grid/loading.gif"></td></tr></table>');
   sto.removeAll();
   var constraints = {what : searchText};
-  if (searchBbox && searchBbox == 'mapExtent') {
-    var bbox = map.getExtent().transform(proj3857,proj4326).toArray();
+  if (searchBbox) {
     constraints.where = {
-       'west'  : Math.max(bbox[0],-180)
-      ,'south' : Math.max(bbox[1],-90)
-      ,'east'  : Math.min(bbox[2],180)
-      ,'north' : Math.min(bbox[3],90)
+       'west'  : Math.max(searchBbox[0],-180)
+      ,'south' : Math.max(searchBbox[1],-90)
+      ,'east'  : Math.min(searchBbox[2],180)
+      ,'north' : Math.min(searchBbox[3],90)
     };
   }
   if (searchBeginDate || searchEndDate) {
@@ -258,6 +301,7 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
       constraints.when.to = searchEndDate.format('yyyy-mm-dd');
     }
   }
+  console && console.dir(constraints);
   GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/').discover(
     function(result) {
       var data = {
@@ -395,6 +439,8 @@ function createDownloadLink() {
     ,rasterFormat : $('#rasterFormat').val()
   });
 
+  var errors = [];
+
   var options = rec.accessOptions;
   _.each(['name','crs','rasterFormat'],function(o) {
     options[o] = $('#' + o).val();
@@ -407,6 +453,9 @@ function createDownloadLink() {
         options['spatialSubset'] = {};
       }
       options['spatialSubset'][o] = val;
+      if (!$.isNumeric(val)) {
+        errors.push(o + ' is not a valid number.');
+      }
     }
     else if (options['spatialSubset']) {
       delete options['spatialSubset'][o];
@@ -433,17 +482,25 @@ function createDownloadLink() {
         options['resolution'] = {};
       }
       options['resolution'][o] = val;
+      if (!$.isNumeric(val)) {
+        errors.push(o + ' is not a valid number.');
+      }
     }
     else if (options['resolution']) {
       delete options['resolution'][o];
     }
   });
- 
-  var idx = searchStore.findExact('id',$('#download-modal').data('reportId'));
-  if (idx >= 0) {
-    searchStore.getAt(idx).get('node').accessLink(function(resp) {
-      alert(resp);
-    },options);
+
+  if (errors.length > 0) {
+    alert('There was a problem with one or more of your input parameters.  Please try again.');
+  }
+  else {
+    var idx = searchStore.findExact('id',$('#download-modal').data('reportId'));
+    if (idx >= 0) {
+      searchStore.getAt(idx).get('node').accessLink(function(resp) {
+        alert(resp);
+      },options);
+    }
   }
 }
 
@@ -468,6 +525,124 @@ function addToMapModal(reportId) {
 
 function addWms(p) {
   alert(p[0]);
+}
+
+function initMap() {
+  searchShadow = new OpenLayers.Layer.Vector(
+     'Search shadow'
+    ,{styleMap : new OpenLayers.StyleMap({
+      'default' : new OpenLayers.Style(
+        OpenLayers.Util.applyDefaults({
+           fillOpacity   : 0
+          ,strokeWidth   : '${getStrokeWidth}'
+          ,strokeColor   : '#888888'
+          ,strokeOpacity : 1
+        })
+        ,{
+          context : {
+            getStrokeWidth : function(f) {
+              // Thicken up border if the bbox is tiny compared to the map.
+              return (f.geometry.getArea() / map.getExtent().toGeometry().getArea()) < 0.0001 ? 5 : 1;
+            }
+          }
+        }
+      )
+    })}
+  );
+
+  searchHilite = new OpenLayers.Layer.Vector(
+     'Search hilite'
+    ,{styleMap : new OpenLayers.StyleMap({
+      'default' : new OpenLayers.Style(
+        OpenLayers.Util.applyDefaults({
+           fillOpacity   : 0.45
+          ,fillColor     : '#ffffff'
+          ,strokeWidth   : '${getStrokeWidth}'
+          ,strokeColor   : '#0000ff'
+          ,strokeOpacity : 1
+        })
+        ,{
+          context : {
+            getStrokeWidth : function(f) {
+              // Thicken up border if the bbox is tiny compared to the map.
+              return (f.geometry.getArea() / map.getExtent().toGeometry().getArea()) < 0.0001 ? 5 : 1;
+            }
+          }
+        }
+      )
+    })}
+  );
+
+  map = new OpenLayers.Map('map',{
+    layers            : [
+      new OpenLayers.Layer.XYZ(
+         'ESRI Ocean'
+        ,'http://services.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/${z}/${y}/${x}.jpg'
+        ,{
+           sphericalMercator : true
+          ,isBaseLayer       : true
+          ,wrapDateLine      : true
+        }
+      )
+      ,searchShadow
+      ,searchHilite
+    ]
+    ,controls          : [
+       new OpenLayers.Control.Navigation()
+      ,new OpenLayers.Control.ZoomPanel()
+    ]
+    ,projection        : proj3857
+    ,displayProjection : proj4326
+    ,units             : 'm'
+    ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
+    ,center            : new OpenLayers.LonLat(0,0)
+    ,zoom              : 0
+  });
+
+  map.events.register('moveend',this,function(e) {
+    $('#restrict').prop('checked') && searchStore.load();
+  });
+}
+
+function syncMapWithResults(sto,lyr) {
+  var features = [];
+  sto.each(function(rec) {
+    features = features.concat(makeFeatures(rec));
+  });
+  lyr.removeFeatures(lyr.features);
+  lyr.addFeatures(features);
+  lyr.redraw();
+}
+
+function makeFeatures(rec) {
+  var features = [];
+  _.each(rec.get('where'),function(o) {
+    o.west = o.west <= -179 ? -178 : o.west;
+    o.south = o.south <= -89 ? -88 : o.south;
+    o.east = o.east >= 179 ? 178 : o.east;
+    o.north = o.north >= 89 ? 88 : o.north;
+    var g = {
+       type        : 'Polygon'
+      ,coordinates : [[
+         [o.west,o.south]
+        ,[o.east,o.south]
+        ,[o.east,o.north]
+        ,[o.west,o.north]
+        ,[o.west,o.south]
+      ]]
+    };
+    var geojson = new OpenLayers.Format.GeoJSON();
+    var f       = geojson.read({
+       type     : 'FeatureCollection'
+      ,features : [{
+         type     : 'Feature'
+        ,geometry : g
+      }]
+    });
+    f[0].geometry.transform(proj4326,proj3857);
+    features.push(f[0]);
+  });
+  return features;
 }
 
 function isoDateToDate(s) {
