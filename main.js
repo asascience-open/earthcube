@@ -384,19 +384,21 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
       }
       if (data.results == 0) {
         gidab.node(searchText,function(node) {
-          var report = node.report();
-          data.results++;
-          data.rows.push({
-             id     : Ext.id()
-            ,title  : report.title
-            ,descr  : report.description != 'none' ? report.description : ''
-            ,when   : report.when
-            ,where  : report.where
-            ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
-            ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
-            ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
-            ,node   : node.isAccessible() ? node : false
-          });
+          if (node) {
+            var report = node.report();
+            data.results++;
+            data.rows.push({
+               id     : Ext.id()
+              ,title  : report.title
+              ,descr  : report.description != 'none' ? report.description : ''
+              ,when   : report.when
+              ,where  : report.where
+              ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
+              ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
+              ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
+              ,node   : node.isAccessible() ? node : false
+            });
+          }
           sto.setBaseParam('start',start ? start : 1);
           sto.loadData(data);
           cmp.getEl().unmask();
