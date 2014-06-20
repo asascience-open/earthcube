@@ -21,6 +21,7 @@ function resize() {
     cmp.setSize($('#search-results').width(),$('#search-results').height());
   }
   if ($('#search-results').is(':visible')) {
+    $('#date-slider').dateRangeSlider('resize');
     $('#map').height($(window).height() - offset - 2);
     Ext.defer(function(){map && map.updateSize()},10);
   }
