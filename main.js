@@ -162,8 +162,8 @@ function init() {
           ,$('#search').val()
           ,opt.params ? opt.params.start : 1
           ,$('#restrict').prop('checked') ? map.getExtent().transform(proj3857,proj4326).toArray() : false
-          ,false && $('#date-slider').dateRangeSlider('min')
-          ,false && $('#date-slider').dateRangeSlider('max')
+          ,$('#date-slider').dateRangeSlider('min')
+          ,$('#date-slider').dateRangeSlider('max')
         );
       }
       ,load : function(sto) {
@@ -622,6 +622,13 @@ function addWms(reportId,lyrName) {
       bounds.transform(proj4326,proj3857);
       mapView.zoomToExtent(bounds);
 
+      lyr.events.register('loadstart',this,function(e) {
+        $('#asset-list ul li div a').filterByData('reportId',e.object.reportId).filterByData('name',e.object.name).show();
+      });
+      lyr.events.register('loadend',this,function(e) {
+        $('#asset-list ul li div a').filterByData('reportId',e.object.reportId).filterByData('name',e.object.name).hide();
+      });
+
       mapView.addLayer(lyr);
     }
   }
@@ -670,6 +677,13 @@ function addVec(reportId,lyrName) {
         });
         bounds.transform(proj4326,proj3857);
         mapView.zoomToExtent(bounds);
+
+        lyr.events.register('loadstart',this,function(e) {
+          $('#asset-list ul li div a').filterByData('reportId',e.object.reportId).filterByData('name',e.object.name).show();
+        });
+        lyr.events.register('loadend',this,function(e) {
+          $('#asset-list ul li div a').filterByData('reportId',e.object.reportId).filterByData('name',e.object.name).hide();
+        });
 
         mapView.addLayer(lyr);
       },true));
@@ -814,6 +828,7 @@ function initMap() {
           + '<label><input data-reportId="' + e.layer.reportId + '" checked type="checkbox">' + e.layer.name + '</label>'
           + '<a href="javascript:void(0)"><img src="img/view_data.png" alt="Zoom-to data" title="Zoom to data" /></a>'
           + '<a href="javascript:void(0)"><img src="img/download_data.png" alt="Download data" title="Download data" /></a>'
+          + '<a href="javascript:void(0)"><img src="img/loading.gif" alt="Loading" title="Loading"/></a>'
         + '</div>'
       + '</li>'
     );
@@ -830,10 +845,12 @@ function initMap() {
         bounds.transform(proj4326,proj3857);
         mapView.zoomToExtent(bounds);
       }
-      else {
+      else if (/download/i.test($(this).find('img').attr('title'))) {
         showDownloadModal(e.layer.reportId,e.layer.attributes.node);
       }
     });
+    $('#asset-list ul li div a').last().data('reportId',e.layer.reportId);
+    $('#asset-list ul li div a').last().data('name',e.layer.name);
   });
 
 }
@@ -901,4 +918,10 @@ function isoDateToDate(s) {
 
 function ellipse(str,length) {
   return str.substr(0,length) + (str.length > length ? '...' : '');
+}
+
+$.fn.filterByData = function(prop,val) {
+  return this.filter(
+    function() { return $(this).data(prop)==val; }
+  );
 }

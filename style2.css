@@ -193,6 +193,6 @@ body > .container-fluid > .row:last-child {
 			float: right;
 		}
 
-		#asset-list ul li a:last-child {
+		#asset-list ul li a:nth-last-child(-n+2) {
 			margin-right: 10px;
 		}
