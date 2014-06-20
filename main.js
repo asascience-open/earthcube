@@ -458,30 +458,47 @@ function showDownloadModal(reportId,node) {
         return;
       }
 
+      // Assume top-down (name -> crs -> rasterFormat) heirarchy.
+      $('#name').change(function() {
+        var rec = _.findWhere(dataAccess,{name : $(this).val()});
+        var options =_.uniq(_.sortBy(_.pluck(
+          _.filter(dataAccess,function(o) {
+            return o.name == $('#name').val();
+          })
+          ,'crs'
+        ),function(o){return o.toLowerCase()}),true);
+        $('#crs').html(
+          '<option>' + options.join('</option><option>') + '</option>'
+        );
+        $('#crs option').filter(function() {return $(this).html() == rec.crs}).prop('selected',true);
+        $('#crs').trigger('change');
+        $('.selectpicker').selectpicker('refresh');
+        syncDownloadOptions();
+      });
+      $('#crs').change(function() {
+        var rec = _.findWhere(dataAccess,{name : $('#name').val(),crs : $(this).val()});
+        var options =_.uniq(_.sortBy(_.pluck(
+          _.filter(dataAccess,function(o) {
+            return o.name == $('#name').val() && o.crs == $('#crs').val();
+          })
+          ,'rasterFormat'
+        ),function(o){return o.toLowerCase()}),true);
+        $('#rasterFormat').html(
+          '<option>' + options.join('</option><option>') + '</option>'
+        );
+        $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
+        $('.selectpicker').selectpicker('refresh');
+        syncDownloadOptions();
+      });
+
       // Try to find the first combo for 4326 that will work and set the defaults.
       var rec = _.find(dataAccess,function(o){return /epsg:4326/i.test(o.crs)});
       if (!rec) {
         rec = dataAccess[0];
       }
       $('#name option').filter(function() {return $(this).html() == rec.name}).prop('selected',true);
-      $('#crs option').filter(function() {return $(this).html() == rec.crs}).prop('selected',true);
-      $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
+      $('#name').trigger('change');
       $('.selectpicker').selectpicker('refresh');
-
-      // Assume top-down (name -> crs -> rasterFormat) heirarchy.
-      $('#name').change(function() {
-        var rec = _.findWhere(dataAccess,{name : $(this).val()});
-        $('#crs option').filter(function() {return $(this).html() == rec.crs}).prop('selected',true);
-        $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
-        $('.selectpicker').selectpicker('refresh');
-        syncDownloadOptions();
-      });
-      $('#crs').change(function() {
-        var rec = _.findWhere(dataAccess,{name : $('#name').val(),crs : $(this).val()});
-        $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
-        $('.selectpicker').selectpicker('refresh');
-        syncDownloadOptions();
-      });
 
       syncDownloadOptions();
       $('#download-modal').modal('show');
