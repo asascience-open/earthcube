@@ -355,7 +355,8 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
     }
   }
   console && console.dir(constraints);
-  GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/').discover(
+  var gidab = GIAPI.DAB('http://23.21.170.207/bcube-broker-tb-101-beta2/');
+  gidab.discover(
     function(result) {
       var data = {
          results : 0
@@ -381,9 +382,31 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
           });
         }
       }
-      sto.setBaseParam('start',start ? start : 1);
-      sto.loadData(data);
-      cmp.getEl().unmask();
+      if (data.results == 0) {
+        gidab.node(searchText,function(node) {
+          var report = node.report();
+          data.results++;
+          data.rows.push({
+             id     : Ext.id()
+            ,title  : report.title
+            ,descr  : report.description != 'none' ? report.description : ''
+            ,when   : report.when
+            ,where  : report.where
+            ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
+            ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
+            ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
+            ,node   : node.isAccessible() ? node : false
+          });
+          sto.setBaseParam('start',start ? start : 1);
+          sto.loadData(data);
+          cmp.getEl().unmask();
+        });
+      }
+      else {
+        sto.setBaseParam('start',start ? start : 1);
+        sto.loadData(data);
+        cmp.getEl().unmask();
+      }
     }
     ,constraints
     ,{
