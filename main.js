@@ -646,7 +646,7 @@ function addVec(reportId,lyrName) {
     else {
       $('#add-to-map-modal').modal('hide');
       $('ul.nav li:last-child a').trigger('click');
-      _.findWhere(searchStore.getAt(searchIdx).get('node').olVector_Layer(function(resp) {
+      searchStore.getAt(searchIdx).get('node').olVector_Layer(function(resp) {
         var lyr = _.findWhere(resp,{name : lyrName});
 
         lyr.projection = proj4326;
@@ -686,7 +686,7 @@ function addVec(reportId,lyrName) {
         });
 
         mapView.addLayer(lyr);
-      },true));
+      },true);
     }
   }
 }
