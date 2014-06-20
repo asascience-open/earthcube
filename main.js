@@ -3,6 +3,7 @@ var searchStore;
 var dataAccess;
 
 var map;
+var mapView;
 var proj3857 = new OpenLayers.Projection("EPSG:3857");
 var proj4326 = new OpenLayers.Projection("EPSG:4326");
 
@@ -15,12 +16,18 @@ function resize() {
     offset = 105;
   }
   $('#search-results').height($(window).height() - offset);
-  $('#map').height($(window).height() - offset - 2);
   var cmp = Ext.getCmp('searchPanel');
   if (cmp && cmp.rendered) {
     cmp.setSize($('#search-results').width(),$('#search-results').height());
   }
-  map && map.updateSize();
+  if ($('#search-results').is(':visible')) {
+    $('#map').height($(window).height() - offset - 2);
+    Ext.defer(function(){map && map.updateSize()},10);
+  }
+  else {
+    $('#mapView').height($(window).height() - offset - 2);
+    Ext.defer(function(){mapView && mapView.updateSize()},10);
+  }
 }
 
 window.onresize = function(e){
@@ -86,6 +93,8 @@ function init() {
     if ($(this).hasClass('active'))
       return false;
     else {
+      $('#mapView').hide();
+      $('#map').show();
       $('#map-col').removeClass('col-md-9').addClass('col-md-4');
       $('#search-row, #search-results').show();
       $('#map-view-col').hide();
@@ -100,12 +109,14 @@ function init() {
     if ($(this).hasClass('active'))
       return false;
     else {
+      $('#map').hide();
+      $('#mapView').show();
       $('#search-row, #search-results').hide();
       $('#map-view-col').show();
       $('#map-col').removeClass('col-md-4').addClass('col-md-9');
       $('li.active').removeClass('active');
       $(this).parent().addClass('active');
-    resize();
+      resize();
     }
   });
 
@@ -642,6 +653,31 @@ function initMap() {
   map.events.register('moveend',this,function(e) {
     $('#restrict').prop('checked') && searchStore.load();
   });
+
+  mapView = new OpenLayers.Map('mapView',{
+    layers            : [
+      new OpenLayers.Layer.XYZ(
+         'ESRI Ocean'
+        ,'http://services.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/${z}/${y}/${x}.jpg'
+        ,{
+           sphericalMercator : true
+          ,isBaseLayer       : true
+          ,wrapDateLine      : true
+        }
+      )
+    ]
+    ,controls          : [
+       new OpenLayers.Control.Navigation()
+      ,new OpenLayers.Control.ZoomPanel()
+    ]
+    ,projection        : proj3857
+    ,displayProjection : proj4326
+    ,units             : 'm'
+    ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
+    ,center            : new OpenLayers.LonLat(0,0)
+    ,zoom              : 0
+  });
+
 }
 
 function syncMapWithResults(sto,lyr) {
