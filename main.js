@@ -122,14 +122,16 @@ function init() {
 
   $('#show-hide-assets a').on('click', function(e){
     e.preventDefault();
-    if ($(this).text() == "Turn all assets off")
+    if ($(this).text() == "Turn all assets off") {
       $('#asset-list input[type="checkbox"]').each(function(i){
-      $(this).prop('checked',false);
-    });
-    else
+        $(this).prop('checked') ? $(this).trigger('click') : false;
+      });
+    }
+    else {
       $('#asset-list input[type="checkbox"]').each(function(i){
-      $(this).prop('checked',true);
-    });
+        !$(this).prop('checked') ? $(this).trigger('click') : false;
+      });
+    }
   });
 
   searchStore = new Ext.data.Store({
@@ -367,7 +369,7 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
           var node = page.next();
           var report = node.report();
           data.rows.push({
-             id     : report.id
+             id     : Ext.id()
             ,title  : report.title
             ,descr  : report.description != 'none' ? report.description : ''
             ,when   : report.when
@@ -392,11 +394,11 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
   );
 }
 
-function showDownloadModal(reportId) {
+function showDownloadModal(reportId,node) {
   $('#download-modal').data('reportId',reportId);
   var searchIdx = searchStore.findExact('id',reportId);
-  if (searchIdx >= 0) {
-    var node = searchStore.getAt(searchIdx).get('node');
+  if (node || searchIdx >= 0) {
+    var node = node ? node : searchStore.getAt(searchIdx).get('node');
     node.accessOptions(function(resp) {
       // If we get here, we are assuming that there is at least one form of dataAccess.
       dataAccess = [];
@@ -560,22 +562,110 @@ function addToMapModal(reportId) {
   if (searchIdx >= 0) {
     var rec = searchStore.getAt(searchIdx);
     var wms = [];
+    var single = [];
     _.each(rec.get('wms'),function(o) {
       var params = [rec.get('id'),o];
+      single = params.slice(0);
       wms.push('<a title="Add layer to map" href="javascript:addWms(\'' + params.join("','") + '\')">' + o + '</a>');
     });
     var vec = [];
     _.each(rec.get('vec'),function(o) {
       var params = [rec.get('id'),o];
+      single = params.slice(0);
       vec.push('<a title="Add layer to map" href="javascript:addVec(\'' + params.join("','") + '\')">' + o + '</a>');
     });
-    $('#add-to-map-modal ul').html('<li>' + wms.concat(vec).join('</li><li>') + '</li>');
-    $('#add-to-map-modal').modal('show');
+    var all = wms.concat(vec);
+    if (all.length == 1) {
+      addVec(single[0],single[1]);
+    }
+    else {
+      $('#add-to-map-modal ul').html('<li>' + all.join('</li><li>') + '</li>');
+      $('#add-to-map-modal').modal('show');
+    }
   }
 }
 
-function addWms(p) {
-  alert(p[0]);
+function addWms(reportId,lyrName) {
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    // check to see if it's been added already
+    if (_.findWhere(mapView.layers,{reportId : reportId,name : lyrName})) {
+      alert("We're sorry, but you have already added this layer to your map.");
+      return false;
+    }
+    else {
+      $('#add-to-map-modal').modal('hide');
+      $('ul.nav li:last-child a').trigger('click');
+      var lyr = _.findWhere(searchStore.getAt(searchIdx).get('node').olWMS_Layer(),{name : lyrName});
+      lyr.reportId = reportId;
+      var rec = searchStore.getAt(searchIdx);
+      if (!lyr.attributes) {
+        lyr.attributes = {};
+      }
+      lyr.attributes.lyrId       = lyr.id;
+      lyr.attributes.reportTitle = rec.get('title');
+      lyr.attributes.where       = rec.get('where');
+      lyr.attributes.node        = rec.get('node');
+
+      var bounds = new OpenLayers.Bounds();
+      _.each(lyr.attributes.where,function(o) {
+        bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
+      });
+      bounds.transform(proj4326,proj3857);
+      mapView.zoomToExtent(bounds);
+
+      mapView.addLayer(lyr);
+    }
+  }
+}
+
+function addVec(reportId,lyrName) {
+  var searchIdx = searchStore.findExact('id',reportId);
+  if (searchIdx >= 0) {
+    // check to see if it's been added already
+    if (_.findWhere(mapView.layers,{reportId : reportId,name : lyrName})) {
+      alert("We're sorry, but you have already added this layer to your map.");
+      return false;
+    }
+    else {
+      $('#add-to-map-modal').modal('hide');
+      $('ul.nav li:last-child a').trigger('click');
+      _.findWhere(searchStore.getAt(searchIdx).get('node').olVector_Layer(function(resp) {
+        var lyr = _.findWhere(resp,{name : lyrName});
+
+        lyr.projection = proj4326;
+        lyr.styleMap   = new OpenLayers.StyleMap({
+          'default' : new OpenLayers.Style(
+            OpenLayers.Util.applyDefaults({
+               fillOpacity   : 0
+              ,strokeWidth   : 3
+              ,strokeColor   : '#ff0000'
+              ,strokeOpacity : 1
+            })
+          )
+        });
+
+        var rec = searchStore.getAt(searchIdx);
+        lyr.reportId = reportId;
+        if (!lyr.attributes) {
+          lyr.attributes = {};
+        }
+        lyr.attributes.lyrId       = lyr.id;
+        lyr.attributes.reportTitle = rec.get('title');;
+        lyr.attributes.where       = rec.get('where');
+        lyr.attributes.node        = rec.get('node');
+
+        var bounds = new OpenLayers.Bounds();
+        _.each(lyr.attributes.where,function(o) {
+          bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
+        });
+        bounds.transform(proj4326,proj3857);
+        mapView.zoomToExtent(bounds);
+
+        mapView.addLayer(lyr);
+      },true));
+    }
+  }
 }
 
 function initMap() {
@@ -641,6 +731,21 @@ function initMap() {
     ,controls          : [
        new OpenLayers.Control.Navigation()
       ,new OpenLayers.Control.ZoomPanel()
+      ,new OpenLayers.Control.Graticule({
+         labelFormat     : 'dms'
+        ,layerName       : 'grid'
+        ,labelSymbolizer : {
+           fontColor   : "#666"
+          ,fontSize    : "10px"
+          ,fontFamily  : "tahoma,helvetica,sans-serif"
+        }
+        ,lineSymbolizer  : {
+           strokeWidth     : 0.40
+          ,strokeOpacity   : 0.90
+          ,strokeColor     : "#999999"
+          ,strokeDashstyle : "dash"
+        }
+      })
     ]
     ,projection        : proj3857
     ,displayProjection : proj4326
@@ -669,13 +774,57 @@ function initMap() {
     ,controls          : [
        new OpenLayers.Control.Navigation()
       ,new OpenLayers.Control.ZoomPanel()
+      ,new OpenLayers.Control.Graticule({
+         labelFormat     : 'dms'
+        ,layerName       : 'grid'
+        ,labelSymbolizer : {
+           fontColor   : "#666"
+          ,fontSize    : "10px"
+          ,fontFamily  : "tahoma,helvetica,sans-serif"
+        }
+        ,lineSymbolizer  : {
+           strokeWidth     : 0.40
+          ,strokeOpacity   : 0.90
+          ,strokeColor     : "#999999"
+          ,strokeDashstyle : "dash"
+        }
+      })
     ]
     ,projection        : proj3857
     ,displayProjection : proj4326
     ,units             : 'm'
     ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
     ,center            : new OpenLayers.LonLat(0,0)
-    ,zoom              : 0
+    ,zoom              : 2
+  });
+
+  mapView.events.register('addlayer',map,function(e) {
+    $('#asset-list ul').append(
+      '<li>'
+        + '<div class="checkbox">'
+          + '<label><input data-reportId="' + e.layer.reportId + '" checked type="checkbox">' + e.layer.name + '</label>'
+          + '<a href="javascript:void(0)"><img src="img/view_data.png" alt="Zoom-to data" title="Zoom to data" /></a>'
+          + '<a href="javascript:void(0)"><img src="img/download_data.png" alt="Download data" title="Download data" /></a>'
+        + '</div>'
+      + '</li>'
+    );
+    $('#asset-list ul li div input').last().change(function() {
+      _.findWhere(mapView.layers,{reportId : e.layer.reportId,name : e.layer.name}).setVisibility($(this).is(":checked"));
+    });
+    $('#asset-list ul li div').last().find('a').click(function() {
+      var lyr = _.findWhere(mapView.layers,{reportId : e.layer.reportId,name : e.layer.name});
+      if (/zoom/i.test($(this).find('img').attr('title'))) {
+        var bounds = new OpenLayers.Bounds();
+        _.each(lyr.attributes.where,function(o) {
+          bounds.extend(new OpenLayers.Bounds(o.west,o.south,o.east,o.north));
+        });
+        bounds.transform(proj4326,proj3857);
+        mapView.zoomToExtent(bounds);
+      }
+      else {
+        showDownloadModal(e.layer.reportId,e.layer.attributes.node);
+      }
+    });
   });
 
 }
