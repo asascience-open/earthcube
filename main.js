@@ -81,6 +81,46 @@ function init() {
     searchStore.load();
   });
 
+  $('ul.nav li:first-child a').on('click', function(e){
+    e.preventDefault();
+    if ($(this).hasClass('active'))
+      return false;
+    else {
+      $('#map-col').removeClass('col-md-9').addClass('col-md-4');
+      $('#search-row, #search-results').show();
+      $('#map-view-col').hide();
+      $('li.active').removeClass('active');
+      $(this).parent().addClass('active');
+      resize();
+    }
+  });
+
+  $('ul.nav li:last-child a').on('click', function(e){
+    e.preventDefault();
+    if ($(this).hasClass('active'))
+      return false;
+    else {
+      $('#search-row, #search-results').hide();
+      $('#map-view-col').show();
+      $('#map-col').removeClass('col-md-4').addClass('col-md-9');
+      $('li.active').removeClass('active');
+      $(this).parent().addClass('active');
+    resize();
+    }
+  });
+
+  $('#show-hide-assets a').on('click', function(e){
+    e.preventDefault();
+    if ($(this).text() == "Turn all assets off")
+      $('#asset-list input[type="checkbox"]').each(function(i){
+      $(this).prop('checked',false);
+    });
+    else
+      $('#asset-list input[type="checkbox"]').each(function(i){
+      $(this).prop('checked',true);
+    });
+  });
+
   searchStore = new Ext.data.Store({
     reader     : new Ext.data.JsonReader({
        idProperty    : 'id'

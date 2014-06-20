@@ -140,3 +140,54 @@ body > .container-fluid > .row:last-child {
 #map {
 	border: 1px solid #edece8;
 }
+
+#map-view-col {
+	display: none;
+}
+
+		#search-results ul li, #show-hide-assets, #asset-list {
+			padding: 21px 31px;
+			background-color: #ededed;
+			background-image: -webkit-linear-gradient(top, #fff, #ededed);
+			background-image:    -moz-linear-gradient(top, #fff, #ededed);
+			background-image:     -ms-linear-gradient(top, #fff, #ededed);
+			background-image:      -o-linear-gradient(top, #fff, #ededed);
+			background-image:         linear-gradient(to bottom, #fff, #ededed);
+		}
+
+#show-hide-assets, #asset-list {
+	border: 1px solid #edece8;
+	padding: 5px;
+	line-height: 24px;
+}
+
+	#show-hide-assets a {
+		text-decoration: none;
+		color: #0c0c0c;
+		font-size: 12px;
+	}
+
+		#show-hide-assets a img {
+			margin-right: 5px;
+		}
+
+		#show-hide-assets a img:last-child {
+			margin-left: 5px;
+		}
+
+#asset-list {
+	border-top: 2px solid #edece8;
+}
+
+	#asset-list ul {
+		border: none;
+		font-size: 12px;
+	}
+
+		#asset-list ul li a {
+			float: right;
+		}
+
+		#asset-list ul li a:last-child {
+			margin-right: 10px;
+		}
