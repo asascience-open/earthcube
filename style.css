@@ -140,3 +140,11 @@
 #link-modal .modal-dialog {
   width: 300px;
 }
+
+.navbar-header > a.navbar-brand {
+  padding-top : 6px;
+}
+
+.navbar-header > a.navbar-brand > img {
+  width : 51px;
+}
