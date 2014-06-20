@@ -460,9 +460,10 @@ function showDownloadModal(reportId,node) {
 
       // Assume top-down (name -> crs -> rasterFormat) heirarchy.
       $('#name').change(function() {
-        var rec = _.findWhere(dataAccess,{name : $(this).val()});
+        var defaultOpt;
         var options =_.uniq(_.sortBy(_.pluck(
           _.filter(dataAccess,function(o) {
+            o.name == $('#name').val() ? defaultOpt = o.accessOptions.crs : false;
             return o.name == $('#name').val();
           })
           ,'crs'
@@ -470,15 +471,15 @@ function showDownloadModal(reportId,node) {
         $('#crs').html(
           '<option>' + options.join('</option><option>') + '</option>'
         );
-        $('#crs option').filter(function() {return $(this).html() == rec.crs}).prop('selected',true);
+        $('#crs option').filter(function() {return $(this).html() == defaultOpt}).prop('selected',true);
         $('#crs').trigger('change');
-        $('.selectpicker').selectpicker('refresh');
         syncDownloadOptions();
       });
       $('#crs').change(function() {
-        var rec = _.findWhere(dataAccess,{name : $('#name').val(),crs : $(this).val()});
+        var defaultOpt;
         var options =_.uniq(_.sortBy(_.pluck(
           _.filter(dataAccess,function(o) {
+            $('#name').val() && o.crs == $('#crs').val() ? defaultOpt = o.accessOptions.rasterFormat : false;
             return o.name == $('#name').val() && o.crs == $('#crs').val();
           })
           ,'rasterFormat'
@@ -486,19 +487,13 @@ function showDownloadModal(reportId,node) {
         $('#rasterFormat').html(
           '<option>' + options.join('</option><option>') + '</option>'
         );
-        $('#rasterFormat option').filter(function() {return $(this).html() == rec.rasterFormat}).prop('selected',true);
+        $('#rasterFormat option').filter(function() {return $(this).html() == defaultOpt}).prop('selected',true);
         $('.selectpicker').selectpicker('refresh');
         syncDownloadOptions();
       });
 
-      // Try to find the first combo for 4326 that will work and set the defaults.
-      var rec = _.find(dataAccess,function(o){return /epsg:4326/i.test(o.crs)});
-      if (!rec) {
-        rec = dataAccess[0];
-      }
-      $('#name option').filter(function() {return $(this).html() == rec.name}).prop('selected',true);
+      $('#name option:first').prop('selected',true);
       $('#name').trigger('change');
-      $('.selectpicker').selectpicker('refresh');
 
       syncDownloadOptions();
       $('#download-modal').modal('show');
