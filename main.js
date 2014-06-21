@@ -61,10 +61,10 @@ function init() {
       searchStore.load();
     }
   });
-  $('a[title="Search"').on('click',function() {
+  $('a[title="Search"]').on('click',function() {
     searchStore.load();
   });
-  $('a[title="Clear search"').on('click',function() {
+  $('a[title="Clear search"]').on('click',function() {
     $('#search').val('');
     $('#search').focus();
   });
