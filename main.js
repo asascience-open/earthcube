@@ -812,9 +812,8 @@ function initMap() {
     ,displayProjection : proj4326
     ,units             : 'm'
     ,maxExtent         : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508.34)
-    ,center            : new OpenLayers.LonLat(0,0)
-    ,zoom              : 1
   });
+  Ext.defer(function(){map.setCenter(new OpenLayers.LonLat(0,0).transform(proj4326,proj3857),1)},1000);
 
   map.events.register('moveend',this,function(e) {
     $('#restrict').prop('checked') && searchStore.load();
