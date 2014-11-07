@@ -356,7 +356,7 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
     }
   }
   console && console.dir(constraints);
-  var gidab = GIAPI.DAB('http://23.21.170.207/bcube-broker/');
+  var gidab = GIAPI.DAB('http://bcube.geodab.eu/bcube-broker/');
   gidab.sources(
     function(result) {
       $('#search').attr('title','Enter a string to search the following source(s): ' + _.sortBy(_.pluck(result,'_title'),function(o){return o.toLowerCase()}).join(', ') + '.');
