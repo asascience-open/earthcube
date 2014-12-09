@@ -222,7 +222,7 @@ function init() {
           });
 
           var download = '';
-          if (rec.get('node') && rec.get('node').isAccessible()) {
+          if (rec.get('node') && (rec.get('node').isAccessible() || rec.get('node').isSimplyAccessible())) {
             var params = [rec.get('id')];
             download = '<a href="javascript:showDownloadModal(\'' + params.join("','") + '\')" title="Download data"><img src="img/download_data.png" title="Download data">Download</a>';
           }
@@ -384,7 +384,7 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
             ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
             ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
             ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
-            ,node   : node.isAccessible() ? node : false
+            ,node   : node.isAccessible() || node.isSimplyAccessible() ? node : false
           });
         }
       }
@@ -402,7 +402,7 @@ function search(cmp,sto,searchText,start,searchBbox,searchBeginDate,searchEndDat
               ,online : _.sortBy(report.online,function(o){return o.protocol.toLowerCase()})
               ,wms    : _.pluck(_.sortBy(node.olWMS_Layer(),function(o){return o.name.toLowerCase()}),'name')
               ,vec    : _.sortBy(node.has_olVector_Layer(),function(o){return o.toLowerCase()})
-              ,node   : node.isAccessible() ? node : false
+              ,node   : node.isAccessible() || node.isSimplyAccessible() ? node : false
             });
           }
           sto.setBaseParam('start',start ? start : 1);
@@ -430,6 +430,11 @@ function showDownloadModal(reportId,node) {
   var searchIdx = searchStore.findExact('id',reportId);
   if (node || searchIdx >= 0) {
     var node = node ? node : searchStore.getAt(searchIdx).get('node');
+    var dl = node.isSimplyAccessible() ? node.simpleAccessLinks() : [];
+    // CHANGEME.  For now, go straight to the 1st download link if cannot build a custom one.
+    if (!node.isAccessible() && !_.isEmpty(_.compact(dl))) {
+      window.open(dl[0]); 
+    }
     node.accessOptions(function(resp) {
       // If we get here, we are assuming that there is at least one form of dataAccess.
       dataAccess = [];
